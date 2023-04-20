@@ -27,7 +27,7 @@ setwd("/Users/eilishmcmaster/Documents/LantCama")
 
 devtools::source_url("https://github.com/eilishmcmaster/SoS_functions/blob/ea46cc026bb56cafd339f5af383c94f46e0de2dd/read_dart_counts_csv_faster_new.r?raw=TRUE")
 
-counts2 <- read_dart_counts_csv_faster('LantCama/dart_raw/Report-DLan22-7500/Report_DLan22_7500_7160part_6495_6370/Report_DLan22-7500_3_moreOrders_SNPcount_3.csv', # import readcount data 
+counts2 <- read_dart_counts_csv_faster('LantCama/dart_raw/Report_DLan22-7500_3_moreOrders_SNPcount_3.csv', # import readcount data 
                                        minAlleleCount=1, 
                                        minGenotypeCount=0)
 
@@ -46,19 +46,56 @@ mm1 <- read.meta.data(d3, RandRbase, species, dataset, fields=(ncol(m2)-4))
 dms       <- dart.meta.data.merge(d3, mm1)
 
 
+
+# 10 cutoff 
+# dont maf filter
+# dont chewck with snp file 
+
+count_subsetter2 <- function(dms, count){
+  # ds <- dms$gt
+  # keepers <- get_minor_allele_frequencies(ds)
+  # ds <- ds[,which(keepers>=min)]
+  # cat("Are there any NAs in the altcount data? ", any(is.na(ds)),"\n")
+  # cat("Loci with NAs:")
+  # print(table(apply(ds, 2, function(x) any(is.na(x)))))
+  # 
+  samples_tk <- dms$sample_names
+
+  s_tk_location <- which(count$sample_names %in% samples_tk)
+
+  count$c1 <- count$c1[,s_tk_location]
+  count$c2 <- count$c2[,s_tk_location]
+  count$sample_names <- colnames(count$c1)
+  
+  rownames(count$c1) <- count$locus_labels
+  rownames(count$c2) <- count$locus_labels
+  
+  
+  count$meta <- count$meta[,s_tk_location]
+  count$sample_qc <- count$sample_qc[,s_tk_location]
+  
+  return(count)
+}
+
 #plot function 
-a_function <- function(dms, counts){
+a_function <- function(dms, counts, filter_reads){
   species <- unique(dms$meta$analyses[,"sp"])
   print(species)
-  
+  counts
   for (i in 1:length(species)) {
     print(paste("Running", species[i],"now"))
     tryCatch({
-      dmsx <- remove.by.list(dms, m2[(m2$sp %in% paste(species[i])),] %>%.$sample) %>% remove.by.maf(., 0.05)
-      test2 <- count_subsetter(dmsx, counts, 0.05)
+      dmsx <- remove.by.list(dms, m2[(m2$sp %in% paste(species[i])),] %>%.$sample)# %>% remove.by.maf(., 0.05)
+      # test2 <- count_subsetter(dmsx, counts, 0.00)
+      test2 <- count_subsetter2(dmsx, counts)
+      
     }, error = function(e) {
       message("Error: not enough loci")
     })
+    c3 <- test2$c1 + test2$c2
+    test2$c1[c3<filter_reads] <- NA
+    test2$c2[c3<filter_reads] <- NA
+    
     if(length(counts$sample_names)>0){
       tr <-  t(test2$c1)
       o <- lapply(split(tr,rownames(tr)), as.list)
@@ -81,7 +118,8 @@ a_function <- function(dms, counts){
       loop.vector <- 1:nrow(c)
       z <- paste(unique(dms$meta$analyses[,"sp"])[i])
       
-      hist(c, main=z, xlab="", ylab="", breaks=50, col="red")
+      hist(c, main=z, xlab="", ylab="", breaks=50, col="red", xaxt='n')
+      axis(side = 1, at = c(0, 0.25,  0.5,  0.75, 1), labels=c(0, 0.25,  0.5,  0.75, 1))
       
       for (i in loop.vector) { # Loop over loop.vector
         
@@ -93,7 +131,9 @@ a_function <- function(dms, counts){
                main = paste(rownames(c)[i]),
                xlab = "",#"MAF reads/ total reads",
                ylab="",
-               xlim = c(0, 1))
+               xlim = c(0, 1),
+               xaxt='n')
+          axis(side = 1, at = c(0, 0.25,  0.5,  0.75, 1), labels=c(0, 0.25,  0.5,  0.75, 1))
         }
       }
       
@@ -106,10 +146,10 @@ a_function <- function(dms, counts){
 
 dms_filter<- remove.by.list(dms, m2[!is.na(m2$sp),] %>%.$sample) 
 
-counts <- count_subsetter(dms_filter, counts2, 0.00)
+# counts <- count_subsetter(dms_filter, counts2, 0.00)
 
 
-pdf(file="lantana_all.pdf")
-a_function(dms_filter, counts)
+pdf(file="lantana_all_10read_nomaf.pdf")
+a_function(dms_filter, counts2, 10)
 dev.off()
 
