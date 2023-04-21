@@ -77,6 +77,12 @@ count_subsetter2 <- function(dms, count){
   return(count)
 }
 
+
+
+n.cores <- 15
+clust <- makeCluster(n.cores)
+clusterExport(clust, "Boston")
+
 #plot function 
 a_function <- function(dms, counts, filter_reads){
   species <- unique(dms$meta$analyses[,"sp"])
@@ -147,9 +153,19 @@ a_function <- function(dms, counts, filter_reads){
 dms_filter<- remove.by.list(dms, m2[!is.na(m2$sp),] %>%.$sample) 
 
 # counts <- count_subsetter(dms_filter, counts2, 0.00)
+# Install and load profvis
+# install.packages("profvis")
+library(profvis)
+
+# Profile the code
+profvis({
+  a_function(dms_filter, counts2, 10)
+})
 
 
+start <- Sys.time()
 pdf(file="lantana_all_10read_nomaf.pdf")
 a_function(dms_filter, counts2, 10)
 dev.off()
+fin <- Sys.time()
 
