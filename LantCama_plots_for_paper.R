@@ -21,37 +21,13 @@ read_histogram_function2 <- function(meta, sp, counts, filter_reads){
     
     if(class(c3_species) %in% c("array", "matrix")){
       c3_species <- c3_species[, colSums(!is.na(c3_species) & c3_species != "") > 0] 
-      out_data[[paste0(species[i])]] <- c3_species
+      out_data[[paste0(species[i])]] <- data.frame(c3_species)
     }else{
       c3_species <- c3_species[!is.na(c3_species)] # remove empty columns
       out_data[[paste0(species[i])]] <- as.vector(c3_species)
       
     }
-    
     out_data[[paste0(species[i])]] <- c3_species
-    # par(mfrow = c(4, 5), mai = c(0.5, 0.2, 0.2, 0.2))  # Set up a 2 x 2 plotting space
-    # 
-    # hist(c3_species, main = species[i], xlab = "", ylab = "", breaks = 50, col = "red", xaxt = 'n') # make the histogram for the species
-    # axis(side = 1, at = c(0, 0.25,  0.5,  0.75, 1), labels = c(0, 0.25,  0.5,  0.75, 1))
-    # 
-    # if(class(c3_species) %in% c("array", "matrix")){
-    #   loop.vector <- 1:nrow(c3_species)
-    #   for (i in loop.vector) { # Loop over loop.vector
-    #     
-    #     # store data in row.i as x
-    #     x <- c3_species[i,]
-    #     if(sum(x, na.rm=TRUE)>0){ # skip empties
-    #       # Plot histogram of x
-    #       hist(x,breaks=50,
-    #            main = paste(rownames(c3_species)[i]),
-    #            xlab = "",#"MAF reads/ total reads",
-    #            ylab="",
-    #            xlim = c(0, 1),
-    #            xaxt='n')
-    #       axis(side = 1, at = c(0, 0.25,  0.5,  0.75, 1), labels=c(0, 0.25,  0.5,  0.75, 1))
-    #     }
-    #   }
-    # }
 }
   return(out_data)
 }
@@ -59,36 +35,57 @@ read_histogram_function2 <- function(meta, sp, counts, filter_reads){
 
 test <- read_histogram_function2(m2, sp, counts2, 10) #needs meta, analysis column, counts data, and minimum number of reads per cell
 
+####
 
-library(ggplot2)
+whole_sp_plots <- function(data, species, max){
+  plots <- list()
+  for(i in seq_along(species)){
+    x <- na.omit(unlist(list(data[[species[i]]])))
+    
+    p <- ggplot(data.frame(x = x), aes(x = x)) +
+      geom_histogram(bins = 100, fill = "red", color="black") +
+      scale_x_continuous(limits = c(0, 1),expand=c(0,0),
+                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1)) +
+      labs(x = "Allele reads/total locus reads", y = "", title=paste0(species[i]))+
+      theme_few()+
+      scale_y_continuous(expand=c(0,0), limits = c(0, max[i]))+
+      theme(panel.grid.major.x = element_line(colour = "gray"))
+    
+    plots[[i]] <- p
+  }
+  return(plots)
+}
 
-par(mfrow = c(1, 3), mai = c(0.5, 0.5, 0.2, 0.2))  # Set up a 2 x 2 plotting space
+z <- whole_sp_plots(test, c("eacp", "eawt", "per1"), c(8500,6000,2500))
+ggarrange(z[[1]],z[[2]],z[[3]], align="hv", ncol=3)
 
-hist(test$eacp, main = "EACP", xlab = "", ylab = "", breaks = 50, col = "red", xaxt = 'n') # make the histogram for the species
-axis(side = 1, at = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1))
-box()
 
-hist(test$eawt, main = "EAWT", xlab = "", ylab = "", breaks = 50, col = "red", xaxt = 'n') # make the histogram for the species
-axis(side = 1, at = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1))
-box()
+###
+specific_sample_plots <- function(data, samples, max){
+  plots <- list()
+  for(i in seq_along(samples)){
+    x <- data[samples[i],]
+    
+    p <- ggplot(data.frame(x = x), aes(x = x)) +
+      geom_histogram(bins = 50, fill = "gray", color="black") +
+      scale_x_continuous(limits = c(0, 1),expand=c(0,0),
+                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1)) +
+      labs(x = "Allele reads/total locus reads", y = "", title=paste0(samples[i]))+
+      theme_few()+
+      scale_y_continuous(expand=c(0,0), limits = c(0, max[i]))+
+      theme(panel.grid.major.x = element_line(colour = "gray"))
+    
+    plots[[paste0(samples[i])]] <- p
+  }
+  return(plots)
+}
 
-hist(test$per1, main = "PER1", xlab = "", ylab = "", breaks = 50, col = "red", xaxt = 'n') # make the histogram for the species
-axis(side = 1, at = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1))
-box()
+eacp_samples <- specific_sample_plots(test$eacp, c("NSW1089413","NSW1095157","NSW1095152"), c(160,160,160))
+ggarrange(eacp_samples[[1]],eacp_samples[[2]],eacp_samples[[3]], align="hv", ncol=3)
 
-if(class(c3_species) %in% c("array", "matrix")){
-  loop.vector <- 1:nrow(c3_species)
-  for (i in loop.vector) { # Loop over loop.vector
 
-    # store data in row.i as x
-    x <- c3_species[i,]
-    if(sum(x, na.rm=TRUE)>0){ # skip empties
-      # Plot histogram of x
-      hist(x,breaks=50,
-           main = paste(rownames(c3_species)[i]),
-           xlab = "",#"MAF reads/ total reads",
-           ylab="",
-           xlim = c(0, 1),
-           xaxt='n')
-      axis(side = 1, at = c(0, 0.25,  0.5,  0.75, 1), labels=c(0, 0.25,  0.5,  0.75, 1))
-  
+eawt_samples <- specific_sample_plots(test$eawt, c("NSW1084671","NSW1084666","NSW1095126"), c(200,200,200))
+ggarrange(eawt_samples[[1]],eawt_samples[[2]],eawt_samples[[3]], align="hv", ncol=3)
+
+eacp_samples <- specific_sample_plots(test$eacp, c("NSW1089413","NSW1095157","NSW1095152"), c(160,160,160))
+
