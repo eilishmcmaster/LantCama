@@ -12,7 +12,7 @@ library(RColorBrewer) #used for making colour scemes for plots
 library(ozmaps) #draws australia coastlines and state boundaries
 library(adegenet) #essential for processing dart data
 library(ggrepel) #used for plotting labels on ggplote
-
+library(ggplot2)
 topskip   <- 6
 nmetavar  <- 18
 RandRbase <- "" #main directory 
@@ -38,7 +38,7 @@ counts2 <- read_dart_counts_csv_faster('LantCama/dart_raw/Report_DLan22-7500_3_m
 # 
 # d3 <- remove.fixed.snps(d2)
 # d3 <- sample.one.snp.per.locus.random(d3, seed=12345)
-
+library(readxl)
 m2 <- custom.read(species, dataset) #read custom metadata csv
 
 # mm1 <- read.meta.data(d3, RandRbase, species, dataset, fields=(ncol(m2)-4))

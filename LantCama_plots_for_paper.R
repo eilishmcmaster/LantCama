@@ -78,7 +78,7 @@ specific_sample_plots <- function(data, samples, max){
   for(i in seq_along(samples)){
     x <- data[samples[i],]
     p <- ggplot(data.frame(x = x), aes(x = x)) +
-      geom_histogram(bins = 50, fill = "gray", color="black", line=0.1) +
+      geom_histogram(bins = 30, fill = "gray", color="black", size=0.2) + #usually use 50 bins
       scale_x_continuous(limits = c(0, 1),
                          breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1),
                          labels = c("0", "1/4 ", "1/3", "1/2", "2/3", " 3/4", "1")) +
@@ -100,16 +100,16 @@ specific_sample_plots <- function(data, samples, max){
 }
 
 eacp_samples <- specific_sample_plots(test$eacp,
-                                      c("NSW1089413","NSW1095157","NSW1095152"),
-                                      c(160,160,160))
+                                      c("NSW1089413","NSW1096776","NSW1095152"),#"NSW1095157"
+                                      rep(250,3))#c(160,160,160)) # for 50 breaks
 
 eawt_samples <- specific_sample_plots(test$eawt,
                                       c("NSW1084671","NSW1084666","NSW1095126"),
-                                      c(250,250,250))
+                                      rep(350,3))#c(250,250,250))
 
 per1_samples <- specific_sample_plots(test$per1,
-                                      c("NSW1158953","NSW1150367","NSW1158964"),
-                                      c(50,50,50))
+                                      c("NSW1158953","NSW1150367","NSW1161296"), #"NSW1152374"),
+                                      rep(80,3))#c(50,50,50))
 
 ggarrange(eacp_samples[[1]],eacp_samples[[2]],eacp_samples[[3]],
           eawt_samples[[1]],eawt_samples[[2]],eawt_samples[[3]],
@@ -121,5 +121,5 @@ annotate_figure(.,
   bottom = "Allele frequency",
   left="Count"
 )
-ggsave("LantCama/outputs/specific_examples.png", plot = last_plot(), width = 190, height = 160, dpi = 300, units = "mm")
+# ggsave("LantCama/outputs/specific_examples.png", plot = last_plot(), width = 190, height = 160, dpi = 300, units = "mm")
 
