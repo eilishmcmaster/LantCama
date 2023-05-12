@@ -43,21 +43,33 @@ whole_sp_plots <- function(data, species, max){
     x <- na.omit(unlist(list(data[[species[i]]])))
     
     p <- ggplot(data.frame(x = x), aes(x = x)) +
-      geom_histogram(bins = 100, fill = "red", color="black") +
-      scale_x_continuous(limits = c(0, 1),expand=c(0,0),
-                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1)) +
-      labs(x = "Allele reads/total locus reads", y = "", title=paste0(species[i]))+
+      geom_histogram(bins = 100, fill = "green", color="black", size=0.2) + 
+      scale_x_continuous(limits = c(0, 1),
+                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1),
+                         labels = c("0", "1/4", "1/3", "1/2", "2/3", "3/4", "1")) +
+      labs(x = element_blank(), y = element_blank(), title=paste0(species[i]))+
       theme_few()+
       scale_y_continuous(expand=c(0,0), limits = c(0, max[i]))+
-      theme(panel.grid.major.x = element_line(colour = "gray"))
+      geom_vline(xintercept = c(0.25, 0.333, 0.5, 0.666, 0.75), 
+                 color = c("red","blue","black","blue","red"),
+                 alpha = 0.3) +
+      theme(axis.text.x = element_text(size=8, colour = c("black","red","blue","black","blue","red","black")),
+            axis.text.y = element_text(size=8),
+            title = element_text(size=10),
+            plot.margin = margin(3, 1, 1, 1))
     
     plots[[i]] <- p
   }
   return(plots)
 }
 
-z <- whole_sp_plots(test, c("eacp", "eawt", "per1"), c(8500,6000,2500))
-ggarrange(z[[1]],z[[2]],z[[3]], align="hv", ncol=3)
+z <- whole_sp_plots(test, c("eacp", "eawt", "per1"), c(8500,8500,8500))
+ggarrange(z[[1]],z[[2]],z[[3]], align="hv", ncol=3,
+          labels=c("A","B","C"), font.label = list(size = 10, color = "black", face = "bold", family = NULL)) %>%
+  annotate_figure(.,
+                  bottom = "Allele frequency",
+                  left="Count")
+ggsave("LantCama/outputs/combined_group.png", plot = last_plot(), width = 190, height = 80, dpi = 300, units = "mm")
 
 
 ###
@@ -65,27 +77,49 @@ specific_sample_plots <- function(data, samples, max){
   plots <- list()
   for(i in seq_along(samples)){
     x <- data[samples[i],]
-    
     p <- ggplot(data.frame(x = x), aes(x = x)) +
-      geom_histogram(bins = 50, fill = "gray", color="black") +
-      scale_x_continuous(limits = c(0, 1),expand=c(0,0),
-                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1), labels = c(0, 1/4, 0.33, 1/2, 0.66, 3/4, 1)) +
-      labs(x = "Allele reads/total locus reads", y = "", title=paste0(samples[i]))+
+      geom_histogram(bins = 50, fill = "gray", color="black", line=0.1) +
+      scale_x_continuous(limits = c(0, 1),
+                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1),
+                         labels = c("0", "1/4 ", "1/3", "1/2", "2/3", " 3/4", "1")) +
+      labs(x = element_blank(), y = element_blank(), title=paste0(samples[i]))+
       theme_few()+
       scale_y_continuous(expand=c(0,0), limits = c(0, max[i]))+
-      theme(panel.grid.major.x = element_line(colour = "gray"))
+      geom_vline(xintercept = c(0.25, 0.333, 0.5, 0.666, 0.75), 
+                 color = c("red","blue","black","blue","red"),
+                 alpha = 0.3) +
+      theme(axis.text.x = element_text(size=8, colour = c("black","red","blue","black","blue","red","black")),
+            axis.text.y = element_text(size=8),
+            title = element_text(size=8),
+            plot.margin = margin(3, 1, 1, 3))
+
     
     plots[[paste0(samples[i])]] <- p
   }
   return(plots)
 }
 
-eacp_samples <- specific_sample_plots(test$eacp, c("NSW1089413","NSW1095157","NSW1095152"), c(160,160,160))
-ggarrange(eacp_samples[[1]],eacp_samples[[2]],eacp_samples[[3]], align="hv", ncol=3)
+eacp_samples <- specific_sample_plots(test$eacp,
+                                      c("NSW1089413","NSW1095157","NSW1095152"),
+                                      c(160,160,160))
 
+eawt_samples <- specific_sample_plots(test$eawt,
+                                      c("NSW1084671","NSW1084666","NSW1095126"),
+                                      c(250,250,250))
 
-eawt_samples <- specific_sample_plots(test$eawt, c("NSW1084671","NSW1084666","NSW1095126"), c(200,200,200))
-ggarrange(eawt_samples[[1]],eawt_samples[[2]],eawt_samples[[3]], align="hv", ncol=3)
+per1_samples <- specific_sample_plots(test$per1,
+                                      c("NSW1158953","NSW1150367","NSW1158964"),
+                                      c(50,50,50))
 
-eacp_samples <- specific_sample_plots(test$eacp, c("NSW1089413","NSW1095157","NSW1095152"), c(160,160,160))
+ggarrange(eacp_samples[[1]],eacp_samples[[2]],eacp_samples[[3]],
+          eawt_samples[[1]],eawt_samples[[2]],eawt_samples[[3]],
+          per1_samples[[1]],per1_samples[[2]],per1_samples[[3]],
+          align="hv", ncol=3, nrow=3,
+          labels=c("A","","","B","","","C"),
+          font.label = list(size = 10, color = "black", face = "bold", family = NULL))%>%
+annotate_figure(.,
+  bottom = "Allele frequency",
+  left="Count"
+)
+ggsave("LantCama/outputs/specific_examples.png", plot = last_plot(), width = 190, height = 160, dpi = 300, units = "mm")
 
