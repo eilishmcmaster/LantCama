@@ -1,5 +1,5 @@
 
-read_histogram_function2 <- function(meta, sp, counts, filter_reads){
+read_histogram_function2 <- function(meta, counts, filter_reads){
   species <- unique(meta$sp[!is.na(meta$sp)])
   
   # filter the reads
@@ -33,7 +33,7 @@ read_histogram_function2 <- function(meta, sp, counts, filter_reads){
 }
 
 
-test <- read_histogram_function2(m2, sp, counts2, 10) #needs meta, analysis column, counts data, and minimum number of reads per cell
+test <- read_histogram_function2(m2, counts2, 10) #needs meta, analysis column, counts data, and minimum number of reads per cell
 
 ####
 
