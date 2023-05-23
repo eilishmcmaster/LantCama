@@ -1,6 +1,6 @@
 
-read_histogram_function2 <- function(meta, counts, filter_reads){
-  species <- unique(meta$sp[!is.na(meta$sp)])
+read_histogram_function2 <- function(meta, counts, filter_reads, species_col) {
+  species <- unique(meta[[species_col]][!is.na(meta[[species_col]])])
   
   # filter the reads
   combined_reads <- counts$c1 + counts$c2
@@ -11,29 +11,28 @@ read_histogram_function2 <- function(meta, counts, filter_reads){
   c3_min <- pmin(t(counts$c1), t(counts$c2), na.rm = TRUE) / t(combined_reads)
   c3_max <- pmax(t(counts$c1), t(counts$c2), na.rm = TRUE) / t(combined_reads)
   c3 <- cbind(c3_min, c3_max) 
- 
+  
   out_data  <- list() # place to put the data 
   
   for (i in seq_along(species)) {
     print(paste("Running", species[i], "now"))
-    samples <- meta$sample[meta$sp == species[i]] # get the NSW ID for that species samples
+    samples <- meta$sample[meta[[species_col]] == species[i]] # get the NSW ID for that species samples
     c3_species <- c3[row.names(c3) %in% samples, ] # get the readcount df with those samples
     
-    if(class(c3_species) %in% c("array", "matrix")){
+    if (class(c3_species) %in% "array" || class(c3_species) %in% "matrix") {
       c3_species <- c3_species[, colSums(!is.na(c3_species) & c3_species != "") > 0] 
       out_data[[paste0(species[i])]] <- data.frame(c3_species)
-    }else{
+    } else {
       c3_species <- c3_species[!is.na(c3_species)] # remove empty columns
       out_data[[paste0(species[i])]] <- as.vector(c3_species)
-      
     }
-    out_data[[paste0(species[i])]] <- c3_species
-}
+  }
+  
   return(out_data)
 }
 
 
-test <- read_histogram_function2(m2, counts2, 10) #needs meta, analysis column, counts data, and minimum number of reads per cell
+test <- read_histogram_function2(m2, counts2, 10, species_col="sp") #needs meta, analysis column, counts data, and minimum number of reads per cell
 
 ####
 
