@@ -49,6 +49,8 @@ read_histogram_function2 <- function(meta, counts, filter_reads, species_col, dm
   combined_reads <- counts$c1 + counts$c2
   counts$c1[combined_reads < filter_reads] <- 0
   counts$c2[combined_reads < filter_reads] <- 0
+  combined_reads <- counts$c1 + counts$c2
+  
   
   # get the proportions for all (rows are samples)
   c3_min <- pmin(t(counts$c1), t(counts$c2), na.rm = TRUE) / t(combined_reads)
