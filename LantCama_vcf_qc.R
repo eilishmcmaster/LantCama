@@ -13,14 +13,15 @@ custom_theme <- theme(
 )
 
 # variant quality 
-# var_qual <- read_delim("variant_random_subset.lqual", delim = "\t",
-#                        col_names = c("chr", "pos", "qual"), skip = 1)
-var_qual <- read_delim("lantana_filtered.lqual", delim = "\t",
+var_qual <- read_delim("variant_random_subset.lqual", delim = "\t",
                        col_names = c("chr", "pos", "qual"), skip = 1)
+# var_qual <- read_delim("lantana_filtered.lqual", delim = "\t",
+#                        col_names = c("chr", "pos", "qual"), skip = 1)
 
 var_qc_stats <- summary(var_qual$qual)
 
-var_qc_plot <- ggplot(var_qual, aes(qual)) + geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3)+ 
+var_qc_plot <- ggplot(var_qual, aes(qual)) + 
+  geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3, bins=100)+ 
   ylab("count")+
   theme_few()+xlim(1,1000)+geom_vline(xintercept = 20, color="red", linetype="dotted")
 
@@ -35,18 +36,19 @@ var_qc_plot2
 
 
 # variant mean depth
-# var_depth <- read_delim("variant_random_subset.ldepth.mean", delim = "\t",
-#                         col_names = c("chr", "pos", "mean_depth", "var_depth"), skip = 1)
-var_depth <- read_delim("lantana_filtered.ldepth.mean", delim = "\t",
+var_depth <- read_delim("variant_random_subset.ldepth.mean", delim = "\t",
                         col_names = c("chr", "pos", "mean_depth", "var_depth"), skip = 1)
+# var_depth <- read_delim("lantana_filtered.ldepth.mean", delim = "\t",
+#                         col_names = c("chr", "pos", "mean_depth", "var_depth"), skip = 1)
 
 var_d_stats <- summary(var_depth$mean_depth)
 
-var_depth_plot <- ggplot(var_depth, aes(mean_depth)) + geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3)+
+var_depth_plot <- ggplot(var_depth, aes(mean_depth)) + 
+  geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3, bins=100)+
   ylab("count")+
   theme_few()+xlim(1,100)+
   geom_vline(xintercept = 10, color="red", linetype="dotted")+ # 10x is a good lower cutoff
-  geom_vline(xintercept = 24, color="red", linetype="dotted") # upper coverage is set to remove repetitive sections or mismapping, usually uses 2x mean but this seems conservative
+  geom_vline(xintercept = 50, color="red", linetype="dotted") # upper coverage is set to remove repetitive sections or mismapping, usually uses 2x mean but this seems conservative
 
 
 var_depth_plot2 <- var_depth_plot +custom_theme+
@@ -60,15 +62,16 @@ var_depth_plot2
 
 
 # individual depth 
-# ind_depth <- read_delim("variant_random_subset.idepth", delim = "\t",
-#                         col_names = c("ind", "nsites", "depth"), skip = 1)
-
-ind_depth <- read_delim("lantana_filtered.idepth", delim = "\t",
+ind_depth <- read_delim("variant_random_subset.idepth", delim = "\t",
                         col_names = c("ind", "nsites", "depth"), skip = 1)
+
+# ind_depth <- read_delim("lantana_filtered.idepth", delim = "\t",
+#                         col_names = c("ind", "nsites", "depth"), skip = 1)
 
 ind_d_stats <- summary(ind_depth$depth)
 
-ind_depth_plot <- ggplot(ind_depth, aes(depth)) + geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3) + theme_few()+
+ind_depth_plot <- ggplot(ind_depth, aes(depth)) + 
+  geom_histogram(fill = "dodgerblue1", colour = "black", alpha = 0.3, bins=100) + theme_few()+
   ylab("count")
 
 
@@ -87,9 +90,9 @@ comb_qc_plots
 
 
 
-ggsave("LantCama_filtered_vcf_qc.png", comb_qc_plots, units="cm", width=12, height=12, dpi=300)
+# ggsave("LantCama_filtered_vcf_qc.png", comb_qc_plots, units="cm", width=12, height=12, dpi=300)
 
-# ggsave("LantCama_vcf_qc.png", comb_qc_plots, units="cm", width=12, height=12, dpi=300)
+ggsave("LantCama_vcf_qc.png", comb_qc_plots, units="cm", width=12, height=12, dpi=300)
 #
 
 raw_eacp <- read.csv("/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/eacpsamples_rawdatalookup.txt", sep="\t")
