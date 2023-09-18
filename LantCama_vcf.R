@@ -84,13 +84,94 @@ is.na( ad[ !hets ] ) <- TRUE
 
 allele1 <- masplit(ad, record = 1)
 allele2 <- masplit(ad, record = 2)
+# allele3 <- masplit(ad, record = 3)
+# allele4 <- masplit(ad, record = 4)
+# 
+# ad1 <- allele1 / (allele1 + allele2 + allele3 + allele4)
+# ad2 <- allele2 / (allele1 + allele2 + allele3 + allele4)
+# ad3 <- allele3 / (allele1 + allele2 + allele3 + allele4)
+# ad4 <- allele4 / (allele1 + allele2 + allele3 + allele4)
+# 
+# hist(ad2, breaks = seq(0,1,by=0.02), col = "#1f78b4", xaxt="n")
+# hist(ad1, breaks = seq(0,1,by=0.02), col = "#a6cee3", add = TRUE)
+# hist(ad3, breaks = seq(0,1,by=0.02), col = "pink", add = TRUE)
+# hist(ad4, breaks = seq(0,1,by=0.02), col = "#F1EB9C", add = TRUE)
+# 
+# axis(side=1, at=c(0,0.25,0.333,0.5,0.666,0.75,1), labels=c(0,"1/4","1/3","1/2","1/3","3/4",1))
+
+
 
 ad1 <- allele1 / (allele1 + allele2)
 ad2 <- allele2 / (allele1 + allele2)
 
 hist(ad2, breaks = seq(0,1,by=0.02), col = "#1f78b4", xaxt="n")
 hist(ad1, breaks = seq(0,1,by=0.02), col = "#a6cee3", add = TRUE)
+
 axis(side=1, at=c(0,0.25,0.333,0.5,0.666,0.75,1), labels=c(0,"1/4","1/3","1/2","1/3","3/4",1))
 
+# get 15% and 95% quantiles for most abundant alleles
+sums <- apply(allele1, MARGIN=2, quantile, probs=c(0.15, 0.95), na.rm=TRUE)
 
-gt_tidy <- extract_gt_tidy(vcfraw)
+sums[,1]
+# most abundant allele hist with 15% and 95% quantiles for locus 1
+tmp <- allele1[,1]
+hist(tmp, breaks=seq(0,100,by=1), col="#808080", main = "P17777us22")
+abline(v=sums[,1], col=2, lwd=2)
+# second most abundant allele hist with 15% and 95% quantiles for locus 1
+tmp2 <- allele2[,1]
+hist(tmp2, breaks=seq(0,100,by=1), col="#808080", main = "P17777us22")
+abline(v=sums[,1], col=2, lwd=2)
+
+# boxplot the allele depth on the first 10 loci 
+boxplot(allele1[,1:10], las=3)
+
+
+# FILTER ALL DATA TO REMOVE RESULTS THAT DONT MEET ALLELE DEPTH REQUIREMENTS
+# Assign the value of vcfraw to a new variable called vcf
+vcf <- vcfraw
+# Extract the genotype information for allele depth (AD) and store it in the ad variable
+ad <- extract.gt(vcf, element = 'AD')
+
+# Split allele depth data into allele 1 and allele2
+allele1 <- masplit(ad, record = 1)
+allele2 <- masplit(ad, record = 2) 
+
+# Calculate the 15th and 95th percentiles for each column (variant) in allele1
+sums <- apply(allele1, MARGIN=2, quantile, probs=c(0.15, 0.95), na.rm=TRUE)
+
+# Subtract the 15th percentile values from each column in allele1 and store the result in dp2
+dp2 <- sweep(allele1, MARGIN=2, FUN = "-", sums[1,])
+# Set genotype values to NA for positions where dp2 is less than 0 and the genotype is not already NA
+vcf@gt[,-1][ dp2 < 0 & !is.na(vcf@gt[,-1]) ] <- NA
+# Subtract the 95th percentile values from each column in allele1 and store the result in dp2
+dp2 <- sweep(allele1, MARGIN=2, FUN = "-", sums[2,])
+# Set genotype values to NA for positions where dp2 is greater than 0
+vcf@gt[,-1][dp2 > 0] <- NA
+# Subtract the 15th percentile values from each column in allele2 and store the result in dp2
+dp2 <- sweep(allele2, MARGIN=2, FUN = "-", sums[1,])
+# Set genotype values to NA for positions where dp2 is less than 0 and the genotype is not already NA
+vcf@gt[,-1][ dp2 < 0 & !is.na(vcf@gt[,-1]) ] <- NA
+# Subtract the 95th percentile values from each column in allele2 and store the result in dp2
+dp2 <- sweep(allele2, MARGIN=2, FUN = "-", sums[2,])
+# Set genotype values to NA for positions where dp2 is greater than 0
+vcf@gt[,-1][dp2 > 0] <- NA
+
+
+ad <- extract.gt(vcf, element = 'AD')
+allele1 <- masplit(ad, record = 1)
+allele2 <- masplit(ad, record = 2)
+boxplot(allele1[,1:10], las=3)
+
+
+gt <- extract.gt(vcf, element = 'GT')
+hets <- is_het(gt)
+is.na( ad[ !hets ] ) <- TRUE
+
+allele1 <- masplit(ad, record = 1)
+allele2 <- masplit(ad, record = 2)
+
+ad1 <- allele1 / (allele1 + allele2)
+ad2 <- allele2 / (allele1 + allele2)
+hist(ad2[,1], breaks = seq(0,1,by=0.02), col = "#1f78b4", xaxt="n")
+hist(ad1[,1], breaks = seq(0,1,by=0.02), col = "#a6cee3", add = TRUE)
+axis(side=1, at=c(0,0.25,0.333,0.5,0.666,0.75,1), labels=c(0,"1/4","1/3","1/2","2/3","3/4",1))
