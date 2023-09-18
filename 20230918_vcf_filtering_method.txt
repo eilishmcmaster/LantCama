@@ -1,0 +1,73 @@
+# conda install -c bioconda vcflib
+
+## https://speciationgenomics.github.io/filtering_vcfs/
+# this method is for QC before proper quality control
+
+# check number of unfiltered variants (its 144661)
+bcftools view -H variant_raw.vcf | wc -l
+
+# zip up 
+bgzip variant_raw.vcf
+chmod +rwx variant_raw.vcf.gz 
+
+# -r is rate of sampling, proportion of snps to keep
+# randomly sample snps, gets 14k loci
+bcftools view variant_raw.vcf.gz | vcfrandomsample -r 0.1 > variant_random_subset.vcf
+
+# compress vcf (makes variant_random_subset.vcf.gz)
+bgzip variant_random_subset.vcf
+chmod +rwx variant_random_subset.vcf.gz
+
+# index vcf (makes variant_random_subset.vcf.gz.csi)
+bcftools index variant_random_subset.vcf.gz
+
+
+# get some quality stats
+mkdir vcftools
+SUBSET_VCF=variant_random_subset.vcf.gz
+OUT=vcftools/variant_random_subset
+
+# calculate allele frequency # didnt work because ploidy 
+# vcftools --gzvcf $SUBSET_VCF --freq2 --out $OUT --max-alleles 4
+
+# mean depth per individual
+vcftools --gzvcf $SUBSET_VCF --depth --out $OUT
+
+# mean depth per site
+vcftools --gzvcf $SUBSET_VCF --site-mean-depth --out $OUT
+
+
+# site quality 
+vcftools --gzvcf $SUBSET_VCF --site-quality --out $OUT
+
+
+# prop missing data per indiviudal # not supported
+# vcftools --gzvcf $SUBSET_VCF --missing-indv --out $OUT
+
+
+# prop missing data per site #not supported 
+# vcftools --gzvcf $SUBSET_VCF --missing-site --out $OUT
+
+
+# het and inbreeding co # not supported
+# vcftools --gzvcf $SUBSET_VCF --het --out $OUT
+
+
+# filtering file
+# include sites for which at least one sample has DP>10
+bcftools filter -i 'QUAL>=20 && FORMAT/DP>=10 && FORMAT/DP<=50' -o lantana_full_filtered.vcf variant_raw.vcf 
+
+# count sites after filtering (18,930)
+bcftools view -H lantana_full_filtered.vcf | wc -l
+
+
+# filter by target ID to just get eacp samples
+bcftools view -S eacp_list.txt -o lantana_full_raw_eacp.vcf variant_raw.vcf --force-samples
+bcftools filter -i 'QUAL>=20 && FORMAT/DP>=10 && FORMAT/DP<=50' -o lantana_full_filtered_eacp.vcf lantana_full_raw_eacp.vcf 
+
+# number of samples
+bcftools query -l lantana_full_filtered_eacp.vcf | wc -l
+
+# number of variant sites (8644)
+bcftools view -H lantana_full_filtered_eacp.vcf | wc -l
+
