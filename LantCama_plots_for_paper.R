@@ -35,29 +35,44 @@ library(readxl)
 m2 <- custom.read(species, dataset) #read custom metadata csv
 
 #######################
+# this filters the readcounts by minimum and maximum quantiles which is done in th vcf method as well
+filter_count_by_quantiles <- function(count_df, min_quantile, max_quantile){
+  quantiles <- apply(count_df, MARGIN=2, quantile, probs=c(min_quantile, max_quantile), na.rm=TRUE)
+  dp1 <- sweep(count_df, MARGIN=2, FUN = "-", sums[1,])
+  dp2 <- sweep(count_df, MARGIN=2, FUN = "-", sums[2,])
+  out_df <- count_df
+  out_df[dp1<0 | dp2>0] <- 0
+  return(out_df)
+}
 
 
-read_histogram_function2 <- function(meta, counts, filter_reads, species_col, dms=NULL, remove_by_dms=NULL) {
+read_histogram_function2 <- function(meta, counts, min_depth, min_quantile, max_quantile, species_col, dms=NULL, remove_by_dms=NULL) {
+  c1 <- counts$c1
+  c2 <- counts$c2
   
   species <- unique(meta[[species_col]][!is.na(meta[[species_col]])])
   
   # anything that is NA must be 0 for the dividing etc
-  counts$c1[is.na(counts$c1)] <- 0
-  counts$c2[is.na(counts$c2)] <- 0
+  c1[is.na(c1)] <- 0
+  c2[is.na(c2)] <- 0
   
   # filter the reads
-  combined_reads <- counts$c1 + counts$c2
-  counts$c1[combined_reads < filter_reads] <- 0
-  counts$c2[combined_reads < filter_reads] <- 0
-  combined_reads <- counts$c1 + counts$c2
+  # filter by quantiles
+  c1 <- filter_count_by_quantiles(c1, min_quantile, max_quantile)
+  c2 <- filter_count_by_quantiles(c2, min_quantile, max_quantile)
+  #filter by total number of reads (sometimes lower quantile is 0)
+  combined_reads <- c1 + c2
+  c1[combined_reads < min_depth] <- 0
+  c2[combined_reads < min_depth] <- 0
+  combined_reads <- c1 + c2
   
   
   # get the proportions for all (rows are samples)
-  c3_min <- pmin(t(counts$c1), t(counts$c2), na.rm = TRUE) / t(combined_reads)
+  c3_min <- pmin(t(c1), t(c2), na.rm = TRUE) / t(combined_reads)
   c3_min[is.infinite(c3_min)] <- 1 # 1/0 is Inf, so making results where there are reads for one but not the other =1 AF
   c3_min[is.nan(c3_min)] <- NA # 0/0 is NaN, so removing results where there were no reads
   
-  c3_max <- pmax(t(counts$c1), t(counts$c2), na.rm = TRUE) / t(combined_reads)
+  c3_max <- pmax(t(c1), t(c2), na.rm = TRUE) / t(combined_reads)
   c3_max[is.infinite(c3_max)] <- 1 # 1/0 is Inf, so making results where there are reads for one but not the other =1 AF
   c3_max[is.nan(c3_max)] <- NA # 0/0 is NaN, so removing results where there were no reads
   
@@ -93,7 +108,8 @@ read_histogram_function2 <- function(meta, counts, filter_reads, species_col, dm
 }
 
 
-test <- read_histogram_function2(m2, counts2, 10, species_col="sp")#  dms=dms, remove_by_dms = TRUE #needs meta, analysis column, counts data, and minimum number of reads per cell
+test <- read_histogram_function2(meta=m2, counts=counts2,
+                                 min_depth=10, min_quantile=0.15, max_quantile=0.95, species_col="sp")
 
 
 ####
@@ -135,7 +151,7 @@ sp_hist_plots <- ggarrange(z[[1]],z[[2]],z[[3]], align="hv", ncol=3,
                   left="Count")
 sp_hist_plots
 
-z[[1]]+ geom_vline(xintercept = 0.14)
+z[[1]]
 # sp_hist_plots
 ggsave("LantCama/outputs/plots/species_ploidy_hist2.png", plot = sp_hist_plots, width = 150, height = 60, dpi = 300, units = "mm")
 
