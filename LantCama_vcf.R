@@ -84,22 +84,6 @@ is.na( ad[ !hets ] ) <- TRUE
 
 allele1 <- masplit(ad, record = 1)
 allele2 <- masplit(ad, record = 2)
-# allele3 <- masplit(ad, record = 3)
-# allele4 <- masplit(ad, record = 4)
-# 
-# ad1 <- allele1 / (allele1 + allele2 + allele3 + allele4)
-# ad2 <- allele2 / (allele1 + allele2 + allele3 + allele4)
-# ad3 <- allele3 / (allele1 + allele2 + allele3 + allele4)
-# ad4 <- allele4 / (allele1 + allele2 + allele3 + allele4)
-# 
-# hist(ad2, breaks = seq(0,1,by=0.02), col = "#1f78b4", xaxt="n")
-# hist(ad1, breaks = seq(0,1,by=0.02), col = "#a6cee3", add = TRUE)
-# hist(ad3, breaks = seq(0,1,by=0.02), col = "pink", add = TRUE)
-# hist(ad4, breaks = seq(0,1,by=0.02), col = "#F1EB9C", add = TRUE)
-# 
-# axis(side=1, at=c(0,0.25,0.333,0.5,0.666,0.75,1), labels=c(0,"1/4","1/3","1/2","1/3","3/4",1))
-
-
 
 ad1 <- allele1 / (allele1 + allele2)
 ad2 <- allele2 / (allele1 + allele2)
@@ -170,8 +154,25 @@ is.na( ad[ !hets ] ) <- TRUE
 allele1 <- masplit(ad, record = 1)
 allele2 <- masplit(ad, record = 2)
 
-ad1 <- allele1 / (allele1 + allele2)
-ad2 <- allele2 / (allele1 + allele2)
+# Set the file name for the PNG
+png_file <- "/Users/eilishmcmaster/Documents/LantCama/LantCama/outputs/plots/vcf_plots/all_sp_filtered_knausb_method_plot.png"
+# Open a PNG graphics device
+png(png_file, width = 800, height = 600)  # Adjust width and height as needed
+# Create the histogram plot for ad2
 hist(ad2[,1], breaks = seq(0,1,by=0.02), col = "#1f78b4", xaxt="n")
+# Add the histogram plot for ad1
 hist(ad1[,1], breaks = seq(0,1,by=0.02), col = "#a6cee3", add = TRUE)
+# Customize the x-axis labels
 axis(side=1, at=c(0,0.25,0.333,0.5,0.666,0.75,1), labels=c(0,"1/4","1/3","1/2","2/3","3/4",1))
+# Close the graphics device and save the plot to the PNG file
+dev.off()
+
+
+# Eilish plot method
+vcf_all_counts <- list()
+vcf_all_counts$c1 <- allele1
+vcf_all_counts$c2 <- allele2
+# need to get the m2 meta with targetids
+test <- read_histogram_function2(meta=m2, counts=counts2,
+                                 min_depth=10, min_quantile=0.15, max_quantile=0.95, species_col="sp")
+###
