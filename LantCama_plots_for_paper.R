@@ -109,7 +109,7 @@ read_histogram_function2 <- function(meta, counts, min_depth, min_quantile, max_
 
 
 test <- read_histogram_function2(meta=m2, counts=counts2,
-                                 min_depth=10, min_quantile=0.15, max_quantile=0.95, species_col="sp")
+                                 min_depth=10, min_quantile=0.05, max_quantile=0.95, species_col="sp")
 
 
 ####

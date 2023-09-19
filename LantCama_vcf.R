@@ -3,7 +3,10 @@ library(ggpubr)
 library(popkin)
 library(SNPRelate)
 library(vcfR)
-
+library(adegenet)
+library(ggthemes)
+library(ggplot2)
+library(ggpubr)
 ### Import data ###
 
 devtools::source_url("https://github.com/eilishmcmaster/SoS_functions/blob/main/sos_functions.R?raw=TRUE")
@@ -11,65 +14,97 @@ devtools::source_url("https://github.com/eilishmcmaster/SoS_functions/blob/main/
 
 
 m2 <- read.csv("/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/Lcam_DLan23-8067_meta.RRv0002.csv", sep=",")
+c2 <- read.csv("/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/meta_targetid.csv")
 
-# vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/raw_incomp.mac3bcf.vcf')
-vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered_eacp.vcf')
+#### Make colour palette ####
+cluster_colours <- scales::hue_pal()(length(unique(c2$cluster)))
+names(cluster_colours) <- unique(c2$cluster)[order(unique(c2$cluster))]
+
+cluster_shapes <- 1:(length(unique(c2$cluster)))
+names(cluster_shapes) <- unique(c2$cluster)[order(unique(c2$cluster))]
+
+
+#### PCA of all lineages ####
+vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered.vcf')
 
 genotype_matrix <- vcfR::vcfR2genind(vcfraw, return.alleles = FALSE)
 
-loc_missing <- colMeans(is.na(genotype_matrix$tab))
+genotype_matrix$tab[1:10,1:10]
 
-gen_d5 <- new("genlight", genotype_matrix$tab) #convert df to genlight object for glPca function
+gt <- genotype_matrix$tab
 
-gen_pca <- glPca(gen_d5, parallel=TRUE, nf=5) #do pca -- this method allows the input to have NAs 
-g_pca_df <- gen_pca[["scores"]] #extract PCs 
-# g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # add metadata 
-
-
-pcnames <- paste0(colnames(g_pca_df)," (",
-                  paste(round(gen_pca[["eig"]][1:5]/sum(gen_pca[["eig"]]) *100, 2)),
-                  "%)") #create names for axes
-
-
-pca_plot2 <- ggplot(g_pca_df, aes(x=PC1, y=PC2))+ 
-  geom_point()+theme_few()+xlab(pcnames[1])+ylab(pcnames[2])
-# scale_colour_manual(values=gro)
-pca_plot2
-
-#####
-
-
-#https://knausb.github.io/vcfR_documentation/determining_ploidy_1.html
-
-
-vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered.vcf')
-
-genotype_matrix <- vcfR::vcfR2genind(vcfraw, return.alleles = TRUE)
-
-## each strand is put into a different column????
-loc_missing <- colMeans(is.na(genotype_matrix$tab))
+loc_missing <- colMeans(is.na(gt))
 hist(loc_missing)
-gt <- genotype_matrix$tab[,which(loc_missing<=0.3)]
+gt <- gt[,loc_missing<=0.3]
 ncol(gt)
+sample_missing <- rowMeans(is.na(gt))
+hist(sample_missing)
+gt <- gt[sample_missing<=0.3,]
+nrow(gt)
+#### need to remove high missing samples
 
 gen_d5 <- new("genlight", gt) #convert df to genlight object for glPca function
-ploidy(gen_d5)
+unique(ploidy(gen_d5)) # adegenet knows that its tetraploid 
 
 gen_pca <- glPca(gen_d5, parallel=TRUE, nf=5) #do pca -- this method allows the input to have NAs 
 g_pca_df <- gen_pca[["scores"]] #extract PCs 
-# g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # add metadata 
+g_pca_df2 <- merge(g_pca_df, c2, by.x=0, by.y="targetid", all.y=FALSE, all.x=FALSE) # add metadata 
 
 
 pcnames <- paste0(colnames(g_pca_df)," (",
                   paste(round(gen_pca[["eig"]][1:5]/sum(gen_pca[["eig"]]) *100, 2)),
-                  "%)") #create names for axes
+                  "%)")
 
 
-pca_plot2 <- ggplot(g_pca_df, aes(x=PC1, y=PC2))+ 
-  geom_point()+theme_few()+xlab(pcnames[1])+ylab(pcnames[2])
-# scale_colour_manual(values=gro)
-pca_plot2
+pca_plot <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=cluster, shape=cluster))+ 
+  geom_point(alpha=0.7)+theme_few()+xlab(pcnames[1])+ylab(pcnames[2])+
+  labs(colour="Genetic group", shape="Genetic group")+
+  scale_colour_manual(values=cluster_colours)+
+  scale_shape_manual(values=cluster_shapes)
 
+pca_plot
+
+##### PCA plot of EACP only ####
+
+vcfraw_eacp <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered_eacp.vcf')
+
+genotype_matrix_eacp <- vcfR::vcfR2genind(vcfraw_eacp, return.alleles = FALSE)
+
+genotype_matrix_eacp$tab[1:10, 1:10]
+
+gt_eacp <- genotype_matrix_eacp$tab
+
+loc_missing_eacp <- colMeans(is.na(gt_eacp))
+hist(loc_missing_eacp)
+gt_eacp <- gt_eacp[, loc_missing_eacp <= 0.3]
+ncol(gt_eacp)
+sample_missing_eacp <- rowMeans(is.na(gt_eacp))
+hist(sample_missing_eacp)
+gt_eacp <- gt_eacp[sample_missing_eacp<=0.3,]
+nrow(gt_eacp)
+
+gen_d5_eacp <- new("genlight", gt_eacp) #convert df to genlight object for glPca function
+unique(ploidy(gen_d5_eacp)) # adegenet knows that its tetraploid 
+
+gen_pca_eacp <- glPca(gen_d5_eacp, parallel=TRUE, nf=5) #do pca -- this method allows the input to have NAs 
+g_pca_df_eacp <- gen_pca_eacp[["scores"]] #extract PCs 
+g_pca_df2_eacp <- merge(g_pca_df_eacp, c2, by.x = 0, by.y = "targetid", all.y = FALSE, all.x = FALSE) # add metadata 
+
+pcnames_eacp <- paste0(colnames(g_pca_df_eacp), " (",
+                       paste(round(gen_pca_eacp[["eig"]][1:5] / sum(gen_pca_eacp[["eig"]]) * 100, 2)),
+                       "%)")
+
+pca_plot_eacp <- ggplot(g_pca_df2_eacp, aes(x = PC1, y = PC2, colour = cluster, shape=cluster)) + 
+  geom_point() + theme_few() + xlab(pcnames_eacp[1]) + ylab(pcnames_eacp[2]) +
+  labs(colour="Genetic group", shape="Genetic group")+
+  scale_colour_manual(values=cluster_colours)+
+  scale_shape_manual(values=cluster_shapes)
+
+pca_plot_eacp
+ggarrange(pca_plot, pca_plot_eacp, common.legend = TRUE, legend="right")
+
+
+#### Ploidy investigation by readcount ####
 # https://adegenet.r-forge.r-project.org/files/tutorial-genomics.pdf
 
 ad <- extract.gt(vcfraw, element = 'AD') #allele depth 
@@ -112,6 +147,7 @@ boxplot(allele1[,1:10], las=3)
 
 # FILTER ALL DATA TO REMOVE RESULTS THAT DONT MEET ALLELE DEPTH REQUIREMENTS
 # Assign the value of vcfraw to a new variable called vcf
+vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered.vcf')
 vcf <- vcfraw
 # Extract the genotype information for allele depth (AD) and store it in the ad variable
 ad <- extract.gt(vcf, element = 'AD')
@@ -121,7 +157,7 @@ allele1 <- masplit(ad, record = 1)
 allele2 <- masplit(ad, record = 2) 
 
 # Calculate the 15th and 95th percentiles for each column (variant) in allele1
-sums <- apply(allele1, MARGIN=2, quantile, probs=c(0.15, 0.95), na.rm=TRUE)
+sums <- apply(allele1, MARGIN=2, quantile, probs=c(0.05, 0.95), na.rm=TRUE)
 
 # Subtract the 15th percentile values from each column in allele1 and store the result in dp2
 dp2 <- sweep(allele1, MARGIN=2, FUN = "-", sums[1,])
@@ -169,10 +205,28 @@ dev.off()
 
 
 # Eilish plot method
-vcf_all_counts <- list()
-vcf_all_counts$c1 <- allele1
-vcf_all_counts$c2 <- allele2
-# need to get the m2 meta with targetids
-test <- read_histogram_function2(meta=m2, counts=counts2,
-                                 min_depth=10, min_quantile=0.15, max_quantile=0.95, species_col="sp")
+# vcf_all_counts <- list()
+# vcf_all_counts$c1 <- allele1
+# vcf_all_counts$c2 <- allele2
+# # need to get the m2 meta with targetids
+# test <- read_histogram_function2(meta=m2, counts=counts2,
+#                                  min_depth=10, min_quantile=0.05, max_quantile=0.95, species_col="sp")
 ###
+
+### FILTER LOCI BY MISSINGNESS ####
+gt <- extract.gt(vcf, element = 'GT')
+
+gt1 <- masplit(gt, record = 1, delim="/")
+gt2 <- masplit(gt, record = 2, delim="/")
+gt3 <- masplit(gt, record = 3, delim="/")
+gt4 <- masplit(gt, record = 4, delim="/")
+
+gta <- (gt1 + gt2 + gt3 + gt4)
+
+loci_missingness <- rowMeans(is.na(gta))
+hist(loci_missingness)
+gta2 <- gta[loci_missingness<=0.3,]
+nrow(gta2)
+loci_missingness2 <- rowMeans(is.na(gta2))
+hist(loci_missingness2)
+hist(colMeans(is.na(gta2)))
