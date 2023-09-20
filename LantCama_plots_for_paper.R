@@ -12,6 +12,8 @@ library(RColorBrewer) #used for making colour scemes for plots
 library(ozmaps) #draws australia coastlines and state boundaries
 library(adegenet) #essential for processing dart data
 library(ggrepel) #used for plotting labels on ggplote
+library(openxlsx)
+library(readxl)
 
 topskip   <- 6
 nmetavar  <- 18
@@ -37,7 +39,7 @@ m2 <- custom.read(species, dataset) #read custom metadata csv
 #######################
 # this filters the readcounts by minimum and maximum quantiles which is done in th vcf method as well
 filter_count_by_quantiles <- function(count_df, min_quantile, max_quantile){
-  quantiles <- apply(count_df, MARGIN=2, quantile, probs=c(min_quantile, max_quantile), na.rm=TRUE)
+  sums <- apply(count_df, MARGIN=2, quantile, probs=c(min_quantile, max_quantile), na.rm=TRUE)
   dp1 <- sweep(count_df, MARGIN=2, FUN = "-", sums[1,])
   dp2 <- sweep(count_df, MARGIN=2, FUN = "-", sums[2,])
   out_df <- count_df
@@ -46,20 +48,31 @@ filter_count_by_quantiles <- function(count_df, min_quantile, max_quantile){
 }
 
 
-read_histogram_function2 <- function(meta, counts, min_depth, min_quantile, max_quantile, species_col, dms=NULL, remove_by_dms=NULL) {
+
+read_histogram_function2 <- function(meta, counts, min_depth,run_quantile=NULL, min_quantile=NULL, max_quantile=NULL, species_col, dms=NULL, remove_by_dms=NULL) {
   c1 <- counts$c1
   c2 <- counts$c2
   
   species <- unique(meta[[species_col]][!is.na(meta[[species_col]])])
   
-  # anything that is NA must be 0 for the dividing etc
+  # filter the reads
+  # filter by quantiles
+  if(isTRUE(run_quantile)){
+    sums <- apply(c1, MARGIN=2, quantile, probs=c(min_quantile, max_quantile), na.rm=TRUE)
+    
+    dp1 <- sweep(c1, MARGIN=2, FUN = "-", sums[1,])
+    dp2 <- sweep(c1, MARGIN=2, FUN = "-", sums[2,])
+    c1[dp1<0 | dp2>0] <- NA
+    
+    dp12 <- sweep(c2, MARGIN=2, FUN = "-", sums[1,])
+    dp22 <- sweep(c2, MARGIN=2, FUN = "-", sums[2,])
+    c2[dp12<0 | dp22>0] <- NA
+  }
+  
   c1[is.na(c1)] <- 0
   c2[is.na(c2)] <- 0
   
-  # filter the reads
-  # filter by quantiles
-  c1 <- filter_count_by_quantiles(c1, min_quantile, max_quantile)
-  c2 <- filter_count_by_quantiles(c2, min_quantile, max_quantile)
+
   #filter by total number of reads (sometimes lower quantile is 0)
   combined_reads <- c1 + c2
   c1[combined_reads < min_depth] <- 0
@@ -108,8 +121,7 @@ read_histogram_function2 <- function(meta, counts, min_depth, min_quantile, max_
 }
 
 
-test <- read_histogram_function2(meta=m2, counts=counts2,
-                                 min_depth=10, min_quantile=0.05, max_quantile=0.95, species_col="sp")
+
 
 
 ####
@@ -140,8 +152,9 @@ whole_sp_plots <- function(data, species, max){
   return(plots)
 }
 
-# counts3 <- count_subsetter(dms, counts2, 0)
 
+test <- read_histogram_function2(meta=m2, counts=counts2,run_quantile = TRUE,min_quantile=0.15, max_quantile=0.95,
+                                 min_depth=10,  species_col="sp") #min_quantile=0.05, max_quantile=0.95,
 
 z <- whole_sp_plots(test,  c("eacp", "eawt", "per1"), NULL)
 sp_hist_plots <- ggarrange(z[[1]],z[[2]],z[[3]], align="hv", ncol=3,
@@ -151,9 +164,8 @@ sp_hist_plots <- ggarrange(z[[1]],z[[2]],z[[3]], align="hv", ncol=3,
                   left="Count")
 sp_hist_plots
 
-z[[1]]
 # sp_hist_plots
-ggsave("LantCama/outputs/plots/species_ploidy_hist2.png", plot = sp_hist_plots, width = 150, height = 60, dpi = 300, units = "mm")
+ggsave("LantCama/outputs/plots/dart_species_ploidy_hist.png", plot = sp_hist_plots, width = 150, height = 60, dpi = 300, units = "mm")
 
 
 ###
@@ -209,7 +221,7 @@ all_hist <- ggarrange(eacp_samples[[1]],eacp_samples[[2]],eacp_samples[[3]],
 
 all_hist
 
-ggsave("LantCama/outputs/plots/all_ploidy_hist.png", plot = all_hist, width = 190, height = 170, dpi = 300, units = "mm")
+ggsave("LantCama/outputs/plots/dart_all_ploidy_hist.png", plot = all_hist, width = 190, height = 170, dpi = 300, units = "mm")
 
 
 #####################
