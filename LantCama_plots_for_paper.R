@@ -153,7 +153,7 @@ whole_sp_plots <- function(data, species, max){
 }
 
 
-test <- read_histogram_function2(meta=m2, counts=counts2,run_quantile = TRUE,min_quantile=0.15, max_quantile=0.95,
+test <- read_histogram_function2(meta=m2, counts=counts2,run_quantile = TRUE,min_quantile=0.1, max_quantile=0.9,
                                  min_depth=10,  species_col="sp") #min_quantile=0.05, max_quantile=0.95,
 
 z <- whole_sp_plots(test,  c("eacp", "eawt", "per1"), NULL)
@@ -200,13 +200,13 @@ specific_sample_plots <- function(data, samples){
 }
 ##
 eacp_samples <- specific_sample_plots(test$eacp,
-                                      c("NSW1089413","NSW1096776","NSW1095152"))#c(160,160,160)) # for 50 breaks
+                                      c("NSW1095158","NSW1152047","NSW11504776"))
 
 eawt_samples <- specific_sample_plots(test$eawt,
-                                      c("NSW1084671","NSW1084666","NSW1095126"))#c(250,250,250))
+                                      c("NSW1084602","NSW1084666","NSW1084631"))
 
 per1_samples <- specific_sample_plots(test$per1,
-                                      c("NSW1158953","NSW1150367","NSW1161296"))#c(50,50,50))
+                                      c("NSW1159103","NSW1150367","NSW1158964"))#c("NSW1158953","NSW1150367","NSW1161296")
 
 all_hist <- ggarrange(eacp_samples[[1]],eacp_samples[[2]],eacp_samples[[3]],
                       eawt_samples[[1]],eawt_samples[[2]],eawt_samples[[3]],

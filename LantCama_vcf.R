@@ -121,19 +121,21 @@ vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lanta
 # dp <- extract.gt(vcfraw, element = 'DP') #allele depth
 
 ad <- extract.gt(vcfraw, element = 'AD') #allele depth 
-gta <- extract.gt(vcfraw, element = 'GT')
-hets <- is_het(gta)
+# gta <- extract.gt(vcfraw, element = 'GT')
+# hets <- is_het(gta)
 #remove homos
 # is.na( ad[ !hets ] ) <- TRUE
 
-c1 <- masplit(ad, record = 1)
+c1o <- masplit(ad, record = 1)
+c1 <- c1o
 c1 <- c1[,colnames(c1) %in% rownames(gt)]
 matching_targetids <- meta$targetid[meta$targetid %in% colnames(c1)]
 c1 <- c1[, colnames(c1) %in% matching_targetids]
 matching_sample <- meta$sample[meta$targetid %in% matching_targetids]
 colnames(c1) <- matching_sample
 
-c2 <- masplit(ad, record = 2)
+c2o <- masplit(ad, record = 2)
+c2 <- c2o
 c2 <- c2[,colnames(c2) %in% rownames(gt)]
 matching_targetids <- meta$targetid[meta$targetid %in% colnames(c2)]
 c2 <- c2[, colnames(c2) %in% matching_targetids]
@@ -144,7 +146,7 @@ vcf_counts <- list(c1=c1, c2=c2)
 
 
 vcf_test <- read_histogram_function2(meta=meta, vcf_counts,
-                                     run_quantile = TRUE, min_quantile=0.15, max_quantile=0.95,
+                                     run_quantile = TRUE, min_quantile=0.1, max_quantile=0.9,
                                  min_depth=10, species_col="cluster")
 
 vcf_z <- whole_sp_plots(vcf_test,  c("eacp", "eawt", "per1"), NULL)
@@ -158,15 +160,19 @@ vcf_sp_hist_plots
 ggsave("LantCama/outputs/plots/vcf_plots/vcf_species_ploidy_hist.png", plot = vcf_sp_hist_plots, width = 150, height = 60, dpi = 300, units = "mm")
 
  ###
-
+# rowMeans(is.na(vcf_test$eacp))[order(rowMeans(is.na(vcf_test$eacp)))]
 vcf_eacp_samples <- specific_sample_plots(vcf_test$eacp,
-                                      c("NSW1089413","NSW1096776","NSW1095152"))#c(160,160,160)) # for 50 breaks
+                                          c("NSW1095158","NSW1152047","NSW1095151"))
+                                      # c("NSW1089413","NSW1096776","NSW1095151"))
 
+# rowMeans(is.na(vcf_test$eawt))[order(rowMeans(is.na(vcf_test$eawt)))]
 vcf_eawt_samples <- specific_sample_plots(vcf_test$eawt,
-                                      c("NSW1084671","NSW1084666","NSW1095126"))#c(250,250,250))
+                                          c("NSW1084602","NSW1084666","NSW1084631"))
+                                      # c("NSW1084671","NSW1084666","NSW1152289"))
 
+# rowMeans(is.na(vcf_test$per1))[order(rowMeans(is.na(vcf_test$per1)))]
 vcf_per1_samples <- specific_sample_plots(vcf_test$per1,
-                                      c("NSW1158953","NSW1150367","NSW1161296"))#c(50,50,50))
+                                      c("NSW1159103","NSW1150367","NSW1158964"))#c("NSW1158953","NSW1150367","NSW1161296")
 
 vcf_all_hist <- ggarrange(vcf_eacp_samples[[1]],vcf_eacp_samples[[2]],vcf_eacp_samples[[3]],
                       vcf_eawt_samples[[1]],vcf_eawt_samples[[2]],vcf_eawt_samples[[3]],
@@ -181,7 +187,7 @@ vcf_all_hist <- ggarrange(vcf_eacp_samples[[1]],vcf_eacp_samples[[2]],vcf_eacp_s
 
 # vcf_all_hist
 
-ggsave("LantCama/outputs/plots/vcf_plots/vcf_all_ploidy_hist.png", plot = vcf_all_hist, width = 190, height = 170, dpi = 300, units = "mm")
+ggsave("LantCama/outputs/plots/vcf_plots/vcf_all_ploidy_hist2.png", plot = vcf_all_hist, width = 190, height = 170, dpi = 300, units = "mm")
 
 ###
 # https://adegenet.r-forge.r-project.org/files/tutorial-genomics.pdf
