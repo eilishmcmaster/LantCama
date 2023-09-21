@@ -234,8 +234,8 @@ names(cluster_colours) <- unique(meta$cluster)[order(unique(meta$cluster))]
 cluster_shapes <- 1:(length(unique(meta$cluster)))
 names(cluster_shapes) <- unique(meta$cluster)[order(unique(meta$cluster))]
 
-
-##### PCA of all lineages ####
+##### PCA ####
+###### PCA of all lineages ####
 vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered.vcf')
 
 # convert to genind
@@ -280,7 +280,7 @@ pca_plot <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=cluster, shape=cluster))+
 
 pca_plot
 
-##### PCA plot of EACP only ####
+###### PCA plot of EACP only ####
 
 vcfraw_eacp <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered_eacp.vcf')
 
@@ -357,7 +357,7 @@ vcf_test <- read_histogram_function2(meta=meta, vcf_counts,
 
 
 
-######## Whole cluster histograms ####
+###### Whole cluster histograms ####
 
 vcf_z <- whole_sp_plots(vcf_test,  c("eacp", "eawt", "per1"), NULL)
 vcf_sp_hist_plots <- ggarrange(vcf_z[[1]],vcf_z[[2]],vcf_z[[3]], align="hv", ncol=3,
@@ -369,7 +369,7 @@ vcf_sp_hist_plots
 
 ggsave("LantCama/outputs/plots/vcf_plots/vcf_species_ploidy_hist.png", plot = vcf_sp_hist_plots, width = 150, height = 60, dpi = 300, units = "mm")
 
-####### Specific example histograms ####
+###### Specific example histograms ######
 
 vcf_eacp_samples <- specific_sample_plots(vcf_test$eacp,
                                           c("NSW1095153", "NSW1152126","NSW1089413"))
@@ -395,3 +395,20 @@ vcf_all_hist <- ggarrange(vcf_eacp_samples[[1]],vcf_eacp_samples[[2]],vcf_eacp_s
 ggsave("LantCama/outputs/plots/vcf_plots/vcf_all_ploidy_hist2.png", plot = vcf_all_hist, width = 190, height = 170, dpi = 300, units = "mm")
 
 
+##### Bam readcount ####
+bamreads <- read.csv("/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/read_counts.txt", sep="\t")
+bamreads$targetid <- substr(bamreads$BAM_File, 1, 7)
+bamreads$percent_unmapped <- bamreads$Unmapped_Reads/(bamreads$Unmapped_Reads + bamreads$Mapped_Reads)
+
+bamreads2 <- merge(bamreads, meta, by="targetid")
+
+plot_unmapped_reads <- ggplot(data=bamreads2, aes(x=cluster, y=percent_unmapped, fill=cluster))+
+  geom_boxplot(outlier.size = 0.5)+theme_few()+
+  scale_fill_manual(values=cluster_colours)+
+  ylim(0,1)+
+  labs(x="Cluster", y="Proportion unmapped reads")+
+  theme(legend.position="none")
+
+plot_unmapped_reads
+
+ggsave("/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf_qc/bam_reads_mapping.png", plot_unmapped_reads, units="cm", width=15, height=10, dpi=300)
