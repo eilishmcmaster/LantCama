@@ -149,6 +149,12 @@ vcf_test <- read_histogram_function2(meta=meta, vcf_counts,
                                      run_quantile = TRUE, min_quantile=0.1, max_quantile=0.9,
                                  min_depth=10, species_col="cluster")
 
+
+
+
+
+#### whole species histograms ####
+
 vcf_z <- whole_sp_plots(vcf_test,  c("eacp", "eawt", "per1"), NULL)
 vcf_sp_hist_plots <- ggarrange(vcf_z[[1]],vcf_z[[2]],vcf_z[[3]], align="hv", ncol=3,
                            labels=c("A","B","C"), font.label = list(size = 10, color = "black", face = "bold", family = NULL)) %>%
@@ -159,20 +165,81 @@ vcf_sp_hist_plots
 
 ggsave("LantCama/outputs/plots/vcf_plots/vcf_species_ploidy_hist.png", plot = vcf_sp_hist_plots, width = 150, height = 60, dpi = 300, units = "mm")
 
- ###
-# rowMeans(is.na(vcf_test$eacp))[order(rowMeans(is.na(vcf_test$eacp)))]
+##### save individual plots to pdf to find best examples #####
+specific_sample_plots2 <- function(data){
+  plots <- list()
+  samples <- rownames(data)
+  for(i in samples){
+    print(i)
+    x <- data[i,] %>% as.numeric()
+    z <- data.frame(x=x)
+    
+    p <- ggplot(z, aes(x)) +
+      geom_histogram(bins = 30, fill = "lightblue", color="black", size=0.2) + #usually use 50 bins
+      scale_x_continuous(limits = c(0, 1),
+                         breaks = c(0,0.25, 0.333, 0.5, 0.666, 0.75, 1),
+                         labels = c("0", "1/4 ", "1/3", "1/2", "2/3", " 3/4", "1")) +
+      labs(x = element_blank(), y = element_blank(), title=paste0(i))+
+      theme_few()+
+      # scale_y_continuous(expand=c(0,0), limits = c(0, max[i]))+
+      geom_vline(xintercept = c(0.25, 0.333, 0.5, 0.666, 0.75), 
+                 color = c("red","blue","black","blue","red"),
+                 alpha = 0.3) +
+      theme(axis.text.x = element_text(size=8, colour = c("black","red","blue","black","blue","red","black"), angle=90),
+            axis.text.y = element_text(size=8),
+            title = element_text(size=8),
+            plot.margin = margin(0,0,0,0))
+    
+    
+    plots[[paste0(i)]] <- p
+    rm(x)
+  }
+  return(plots)
+}
+
+
+eacp_all_plots <- specific_sample_plots2(vcf_test$eacp)
+
+pdf("/Users/eilishmcmaster/Documents/LantCama/LantCama/outputs/plots/vcf_plots/eacp_allplots.pdf",width = 3, height = 3, onefile = TRUE)
+for(i in 1:length(eacp_all_plots)){
+  tplot <- eacp_all_plots[[i]]
+  print(tplot)
+}
+dev.off()
+
+eacp_good_samples <- c("NSW1078961", "NSW1152126","NSW1089413","NSW1089204","NSW1095153","NSW1096750.1")
+
+per1_all_plots <- specific_sample_plots2(vcf_test$per1)
+pdf("/Users/eilishmcmaster/Documents/LantCama/LantCama/outputs/plots/vcf_plots/per1_allplots.pdf",width = 3, height = 3, onefile = TRUE)
+for(i in 1:length(per1_all_plots)){
+  tplot <- per1_all_plots[[i]]
+  print(tplot)
+}
+dev.off()
+
+per1_good_samples <- c("NSW1089128","NSW1150350","NSW1150436","NSW1158956","NSW1161295")
+
+
+eawt_all_plots <- specific_sample_plots2(vcf_test$eawt)
+pdf("/Users/eilishmcmaster/Documents/LantCama/LantCama/outputs/plots/vcf_plots/eawt_allplots.pdf",width = 3, height = 3, onefile = TRUE)
+for(i in 1:length(eawt_all_plots)){
+  tplot <- eawt_all_plots[[i]]
+  print(tplot)
+}
+dev.off()
+
+eawt_good_samples <- c("NSW1084601","NSW1096829","NSW1089497")
+
+### individual esample histograms ####
+
 vcf_eacp_samples <- specific_sample_plots(vcf_test$eacp,
-                                          c("NSW1095158","NSW1152047","NSW1095151"))
-                                      # c("NSW1089413","NSW1096776","NSW1095151"))
+                                          c("NSW1095153", "NSW1152126","NSW1089413"))
 
-# rowMeans(is.na(vcf_test$eawt))[order(rowMeans(is.na(vcf_test$eawt)))]
 vcf_eawt_samples <- specific_sample_plots(vcf_test$eawt,
-                                          c("NSW1084602","NSW1084666","NSW1084631"))
-                                      # c("NSW1084671","NSW1084666","NSW1152289"))
+                                          c("NSW1084601","NSW1096829","NSW1089497"))
 
-# rowMeans(is.na(vcf_test$per1))[order(rowMeans(is.na(vcf_test$per1)))]
 vcf_per1_samples <- specific_sample_plots(vcf_test$per1,
-                                      c("NSW1159103","NSW1150367","NSW1158964"))#c("NSW1158953","NSW1150367","NSW1161296")
+                                      c("NSW1089128","NSW1150350","NSW1150436"))
 
 vcf_all_hist <- ggarrange(vcf_eacp_samples[[1]],vcf_eacp_samples[[2]],vcf_eacp_samples[[3]],
                       vcf_eawt_samples[[1]],vcf_eawt_samples[[2]],vcf_eawt_samples[[3]],

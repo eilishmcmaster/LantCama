@@ -101,6 +101,25 @@ length(which((raw_eacp$targetid)!="#N/A"))
 clipr::write_clip(raw_eacp$targetid)
 # eacp_list <- paste(raw_eacp$targetid[which(raw_eacp$sp == "eacp")], collapse = ",")
 
+
+
+##### Bam readcount 
+bamreads <- read.csv("/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/read_counts.txt", sep="\t")
+bamreads$targetid <- substr(bamreads$BAM_File, 1, 7)
+bamreads$percent_unmapped <- bamreads$Unmapped_Reads/(bamreads$Unmapped_Reads + bamreads$Mapped_Reads)
+
+bamreads2 <- merge(bamreads, meta, by="targetid")
+
+plot_unmapped_reads <- ggplot(data=bamreads2, aes(x=cluster, y=percent_unmapped, fill=cluster))+
+  geom_boxplot(outlier.size = 0.5)+theme_few()+
+  scale_fill_manual(values=cluster_colours)+
+  ylim(0,1)+
+  labs(x="Cluster", y="Proportion unmapped reads")+
+  theme(legend.position="none")
+
+plot_unmapped_reads
+
+ggsave("/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf_qc/bam_reads_mapping.png", plot_unmapped_reads, units="cm", width=15, height=10, dpi=300)
 # #########################
 # # empty because it didnt work for not diploid
 # 
