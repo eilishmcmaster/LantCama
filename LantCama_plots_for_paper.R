@@ -234,6 +234,12 @@ names(cluster_colours) <- unique(meta$cluster)[order(unique(meta$cluster))]
 cluster_shapes <- 1:(length(unique(meta$cluster)))
 names(cluster_shapes) <- unique(meta$cluster)[order(unique(meta$cluster))]
 
+
+pop_colours <- named_list_maker(meta$pop[which(meta$cluster=="eacp")], "Set3", 9)
+
+pop_shapes <- 1:(length(unique(meta$pop[which(meta$cluster=="eacp")])))
+names(pop_shapes) <- unique(meta$pop[which(meta$cluster=="eacp")])[order(unique(meta$pop[which(meta$cluster=="eacp")]))]
+
 ##### PCA ####
 ###### PCA of all lineages ####
 vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered.vcf')
@@ -241,13 +247,26 @@ vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lanta
 # convert to genind
 genotype_matrix <- vcfR::vcfR2genind(vcfraw, return.alleles = TRUE)
 
-gt <- genotype_matrix$tab
+gt <- genotype_matrix$tab %>% as.data.frame()
 
 # remove high missing loci
 loc_missing <- colMeans(is.na(gt))
 hist(loc_missing)
 gt <- gt[,loc_missing<=0.2]
 ncol(gt)
+
+# remove fixed 
+cols_to_remove <- which(apply(gt, 2, function(col) all(col %in% c(0, NA))))
+
+if(length(cols_to_remove)>0){
+  gt <- gt[, -cols_to_remove]
+}
+cols_to_remove <- which(apply(gt, 2, function(col) all(col %in% c(4, NA))))
+if(length(cols_to_remove)>0){
+  gt <- gt[, -cols_to_remove]
+}
+ncol(gt)
+
 
 # remove high missing samples
 sample_missing <- rowMeans(is.na(gt))
@@ -294,6 +313,18 @@ loc_missing_eacp <- colMeans(is.na(gt_eacp))
 hist(loc_missing_eacp)
 gt_eacp <- gt_eacp[, loc_missing_eacp <= 0.2]
 ncol(gt_eacp)
+
+cols_to_remove <- which(apply(gt, 2, function(col) all(col %in% c(0, NA))))
+
+if(length(cols_to_remove)>0){
+  gt <- gt[, -cols_to_remove]
+}
+cols_to_remove <- which(apply(gt, 2, function(col) all(col %in% c(4, NA))))
+if(length(cols_to_remove)>0){
+  gt <- gt[, -cols_to_remove]
+}
+ncol(gt)
+
 sample_missing_eacp <- rowMeans(is.na(gt_eacp))
 hist(sample_missing_eacp)
 gt_eacp <- gt_eacp[sample_missing_eacp<=0.2,]
@@ -305,6 +336,8 @@ unique(ploidy(gen_d5_eacp)) # adegenet knows that its tetraploid
 gen_pca_eacp <- glPca(gen_d5_eacp, parallel=TRUE, nf=5) #do pca -- this method allows the input to have NAs 
 g_pca_df_eacp <- gen_pca_eacp[["scores"]] #extract PCs 
 g_pca_df2_eacp <- merge(g_pca_df_eacp, meta, by.x = 0, by.y = "targetid", all.y = FALSE, all.x = FALSE) # add metadata 
+
+g_pca_df2_eacp <- g_pca_df2_eacp[!(g_pca_df2_eacp$pop %in% "na"),]
 
 pcnames_eacp <- paste0(colnames(g_pca_df_eacp), " (",
                        paste(round(gen_pca_eacp[["eig"]][1:5] / sum(gen_pca_eacp[["eig"]]) * 100, 2)),
@@ -323,8 +356,43 @@ pca_plots_comb <- ggarrange(pca_plot, pca_plot_eacp, common.legend = TRUE, label
 ggsave("LantCama/outputs/plots/vcf_plots/vcf_pca_plots.png", 
        plot = pca_plots_comb, width = 180, height = 80, dpi = 300, units = "mm")
 
+##
+pca_plot_eacp_lat <- ggplot(g_pca_df2_eacp, aes(x = PC1, y = PC2, colour = as.numeric(lat))) + 
+  geom_point() + theme_few() + xlab(pcnames_eacp[1]) + ylab(pcnames_eacp[2]) +
+  labs(colour="Latitude")+
+  scale_color_gradient(low = "blue", high = "red")+
+  guides(
+    colour = guide_colorbar(title.position = "top")
+  )+
+  theme(legend.position="bottom")
+  
 
+pca_plot_eacp_lat
 
+library(ggrepel)
+
+pca_plot_eacp_pop <-
+  ggplot(g_pca_df2_eacp, aes(x = PC1, y = PC2, colour = pop, shape=pop)) + 
+  geom_point() + theme_few() + xlab(pcnames_eacp[1]) + ylab(pcnames_eacp[2]) +
+  labs(colour="Population", shape="Population")+  
+  # scale_colour_manual(values=pop_colours)+
+  scale_shape_manual(values=pop_shapes)+
+  theme(legend.spacing.x = unit(0, 'cm'))+
+  geom_text_repel(aes(label=sample), force=2, max.overlaps=1, size=2, show.legend=FALSE)+
+  guides(
+    shape = guide_legend(keywidth = 0.7, keyheight = 0.7, nrow=5,title.position = "top"),
+    color = guide_legend(keywidth = 0.7, keyheight = 0.7, nrow=5, title.position = "top")
+  )+
+  theme(legend.position = "bottom", legend.text = element_text(size = 6))
+
+pca_plot_eacp_pop
+
+eacp_pca_plots_comb <- ggarrange(pca_plot_eacp_lat, pca_plot_eacp_pop, align="hv", common.legend = FALSE, labels=c("A","B"))
+
+# eacp_pca_plots_comb
+
+ggsave("LantCama/outputs/plots/vcf_plots/vcf_eacp_pca_plots.png", 
+       plot = eacp_pca_plots_comb, width = 180, height = 110, dpi = 300, units = "mm")
 
 ##### Ploidy investigation by VCF ####
 vcfraw <- read.vcfR('/Users/eilishmcmaster/Documents/LantCama/LantCama/vcf/lantana_full_filtered.vcf')
