@@ -104,7 +104,7 @@ read_histogram_function2 <- function(meta, counts, min_depth,run_quantile=NULL, 
     
     c3_species <- c3[row.names(c3) %in% samples, ] # get the readcount df with those samples
     
-    if (class(c3_species) %in% "array" || class(c3_species) %in% "matrix") {
+    if (is.array(c3_species) | is.matrix(c3_species)) {
       c3_species <- c3_species[, colSums(!is.na(c3_species) & c3_species != "") > 0] 
       out_data[[paste0(species[i])]] <- data.frame(c3_species)
     } else {
@@ -135,7 +135,7 @@ whole_sp_plots <- function(data, species, max){
                  alpha = 0.3) +
       theme(axis.text.x = element_text(size=8, colour = c("black","red","blue","black","blue","red","black"), angle=90),
             axis.text.y = element_text(size=8),
-            title = element_text(size=8, face="italic"),
+            title = element_text(size=8),
             plot.margin = margin(0, 0, 0, 0))
     
     plots[[i]] <- p
@@ -179,7 +179,7 @@ counts2 <- read_dart_counts_csv_faster('LantCama/dart_raw/Report_DLan22-7500_3_m
                                        minAlleleCount=0, 
                                        minGenotypeCount=0)
 
-m2 <- custom.read(species, dataset) #read custom metadata csv
+m2 <- custom.read(species, dataset) %>% as.data.frame()#read custom metadata csv
 
 test <- read_histogram_function2(meta=m2, counts=counts2,run_quantile = FALSE,min_quantile=0.1, max_quantile=0.9,
                                  min_depth=10,  species_col="sp") #min_quantile=0.05, max_quantile=0.95,
@@ -461,6 +461,7 @@ vcf_all_hist <- ggarrange(vcf_eacp_samples[[1]],vcf_eacp_samples[[2]],vcf_eacp_s
 
 
 ggsave("LantCama/outputs/plots/vcf_plots/vcf_all_ploidy_hist2.png", plot = vcf_all_hist, width = 190, height = 170, dpi = 300, units = "mm")
+
 
 
 ##### Bam readcount ####
