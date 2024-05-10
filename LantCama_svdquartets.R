@@ -26,7 +26,9 @@ v         <- "RRv0003"
 meta      <- read.meta.data.full.analyses.df(d3, basedir, species, dataset)
 # meta      <- read_meta_info(d3, basedir, species, dataset, version=v) 
 
-dms        <- dart.meta.data.merge(d3, meta)
+dms        <- dart.meta.data.merge(d3, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))])
+
+
 # dm        <- merge_gt_meta_data(d3, meta)
 m2 <- dms$meta$analyses %>% as.data.frame
 # dmv       <- arrange_data_by_analysis_field(dm, "EA_only", basedir, species, dataset)
@@ -53,7 +55,7 @@ library(pvclust)#https://cran.r-project.org/web/packages/pvclust/index.html
 library(tanggle)
 library(RSplitsTree)
 
-# splitstree(dist(dms$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80%missing.nex')
+# splitstree(dist(dms$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_50%missing.nex')
 
 #need to open and save the file in Splitstree app for it to open here, IDK why
 Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80%missing.nex')
@@ -98,8 +100,8 @@ splitstree_plot <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd
   theme(legend.position = "bottom", legend.key.size = unit(0.5, 'lines'))+coord_fixed()+
   guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
 
-ggsave("LantCama/outputs/LantCama_splitstree_nation_morpho.svg",
-       splitstree_plot, width = 20, height = 30, units = "cm", dpi=600)
+ggsave("LantCama/outputs/LantCama_splitstree_nation_morpho.pdf",
+       splitstree_plot, width = 20, height = 20, units = "cm", dpi=600)
 
 splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd = NULL, 
        as.Date = FALSE, yscale = "none", yscale_mapping = NULL, 
@@ -116,7 +118,7 @@ splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slante
   theme(legend.position = "bottom")+coord_fixed()+
   guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
 
-ggsave("LantCama/outputs/LantCama_splitstree_cluster.svg",
+ggsave("LantCama/outputs/LantCama_splitstree_cluster.pdf",
        splitstree_plot_cluster, width = 20, height = 30, units = "cm", dpi=600)
 # 
 # 
@@ -129,3 +131,48 @@ ggsave("LantCama/outputs/LantCama_splitstree_cluster.svg",
 # ggsave("LantCama/outputs/paper/fig2_LantCama_pca_tree_tree.pdf",
 #        pca_tree_tree_plot, width = 18, height = 18, units = "cm", dpi=600)
 
+###### TREE ########
+
+library(phangorn)
+
+#hamming distance
+genetic_distances <- dist(dms$gt, method = "binary")
+tree <- upgma(genetic_distances)
+# tree <- nj(genetic_distances)
+# tree <- wpgma(genetic_distances)
+
+ggtree_obj <- ggtree(tree)
+
+x1 <- m2[m2$sample %in% ggtree_obj$data$label,]
+rownames(x1) <- x1$sample
+
+# Assuming you already have the ggtree object ggtree_obj and tree object
+# 
+# # Plot the tree with modified branch width and distances on x-axis
+# ggtree_obj <- ggtree(tree, layout="circular") %<+% x1 +
+#   geom_tippoint(aes(color = morphid2, shape=national2), size=1) +  
+#   # scale_colour_manual(values=morphid_colours, na.translate=FALSE, name='Morphotype')+
+#   scale_shape_manual(values=c(16,17), na.translate=FALSE, name='Country')
+# 
+# ggsave("LantCama/outputs/LantCama_hamming_upgma.pdf",
+#        ggtree_obj, width = 30, height = 60, units = "cm", dpi=600)
+
+ggtree_obj <- ggtree(tree) %<+% x1 
+# geom_tippoint(aes(color = cluster, shape=national2), size=0.7) + theme_tree2()
+ggtree_obj
+
+cc <-   named_list_maker(x1$cluster, 'Spectral',11)
+cc2 <- named_list_maker(x1$cluster, 'Paired',11)
+cc2 <- named_list_maker(x1$national2, 'Paired',11)
+
+hmt <-  gheatmap(ggtree_obj, x1[,c('cluster','morphid2','national2')],
+                 offset=0, width=.1,font.size=2,colnames_offset_y=c(10,15,10),
+                 custom_column_labels=c("Cluster","Morphotype","Country"),
+                 colnames_angle=90, colnames_position="top")+
+  scale_fill_manual(values=c(cc,cc2, morphid_colours))+
+  theme_tree2()+theme(legend.position = "none")+
+  scale_y_continuous(expand=c(0.02, 0))+
+  geom_vline(xintercept = 0.05, color="grey80", linetype="dotted")+
+  geom_vline(xintercept = 0, color="grey80", linetype="dotted")+
+  geom_vline(xintercept = 0.1, color="grey80", linetype="dotted")+
+  geom_rootedge(0.001)
