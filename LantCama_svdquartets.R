@@ -13,26 +13,20 @@ basedir <- ""
 d1        <- new.read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetavar, euchits=FALSE)
 # qc1       <- report_dart_qc_stats(d1, basedir, species, dataset, threshold_missing_loci = 0.8)
 
-d2        <- exclude.samples(d1,by="file",
-                             excluded_sample_file = "LantCama/meta/Lcam4_sampfilt_missing80.txt", remove_fixed_loci = TRUE)
-d2        <- remove.poor.quality.snps(d2, min_repro=0.96, max_missing=0.8)
-# qc2       <- report_dart_qc_stats(d2, basedir, species, dataset)
-# d2 <- remove.by.missingness(d2, 0.5)
-d3        <- sample.one.snp.per.locus.random(d2, seed=12345) 
-# qc3       <- report_dart_qc_stats(d3, basedir, species, dataset)
+d2        <- exclude.samples(d1,by="file", excluded_sample_file = "LantCama/meta/Lcam4_sampfilt_missing80.txt")
 
-v         <- "RRv0003"
+meta      <- read.meta.data.full.analyses.df(d2, basedir, species, dataset)
+d3        <- dart.meta.data.merge(d2, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))])
+d3        <- remove.poor.quality.snps(d3, min_repro=0.96, max_missing=0.4)%>% remove.fixed.snps()
+dms        <- sample.one.snp.per.locus.random(d3, seed=12345) 
+dmsx <- remove.by.missingness(dms, 0.5)
+samples_to_keep_80 <- dms$sample_names
+loci_to_keep_80 <- colnames(dms$gt)
 
-meta      <- read.meta.data.full.analyses.df(d3, basedir, species, dataset)
-# meta      <- read_meta_info(d3, basedir, species, dataset, version=v) 
+write.table(samples_to_keep_80,'LantCama/meta/samples_to_keep_80%.csv', row.names = FALSE, col.names = FALSE)
+write.table(loci_to_keep_80,'LantCama/meta/loci_to_keep_80%.csv', row.names = FALSE, col.names = FALSE)
 
-dms        <- dart.meta.data.merge(d3, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))])
-
-
-# dm        <- merge_gt_meta_data(d3, meta)
 m2 <- dms$meta$analyses %>% as.data.frame
-# dmv       <- arrange_data_by_analysis_field(dm, "EA_only", basedir, species, dataset)
-
 
 #### SVDq####
 # dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
@@ -55,7 +49,7 @@ library(pvclust)#https://cran.r-project.org/web/packages/pvclust/index.html
 library(tanggle)
 library(RSplitsTree)
 
-# splitstree(dist(dms$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_50%missing.nex')
+# splitstree(dist(dms$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80%missing.nex')
 
 #need to open and save the file in Splitstree app for it to open here, IDK why
 Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80%missing.nex')
@@ -136,7 +130,7 @@ ggsave("LantCama/outputs/LantCama_splitstree_cluster.pdf",
 library(phangorn)
 
 #hamming distance
-genetic_distances <- dist(dms$gt, method = "binary")
+genetic_distances <- dist(dmsx$gt, method = "binary")
 tree <- upgma(genetic_distances)
 # tree <- nj(genetic_distances)
 # tree <- wpgma(genetic_distances)
@@ -157,15 +151,15 @@ rownames(x1) <- x1$sample
 # ggsave("LantCama/outputs/LantCama_hamming_upgma.pdf",
 #        ggtree_obj, width = 30, height = 60, units = "cm", dpi=600)
 
-ggtree_obj <- ggtree(tree) %<+% x1 
+ggtree_obj <- ggtree(tree, size=0.01) %<+% x1 
 # geom_tippoint(aes(color = cluster, shape=national2), size=0.7) + theme_tree2()
 ggtree_obj
 
-cc <-   named_list_maker(x1$cluster, 'Spectral',11)
+cc <-   named_list_maker(x1$cluster_histogram, 'Spectral',11)
 cc2 <- named_list_maker(x1$cluster, 'Paired',11)
 cc2 <- named_list_maker(x1$national2, 'Paired',11)
 
-hmt <-  gheatmap(ggtree_obj, x1[,c('cluster','morphid2','national2')],
+hmt <-  gheatmap(ggtree_obj, x1[,c('cluster_histogram','morphid2','national2')],
                  offset=0, width=.1,font.size=2,colnames_offset_y=c(10,15,10),
                  custom_column_labels=c("Cluster","Morphotype","Country"),
                  colnames_angle=90, colnames_position="top")+
@@ -175,4 +169,37 @@ hmt <-  gheatmap(ggtree_obj, x1[,c('cluster','morphid2','national2')],
   geom_vline(xintercept = 0.05, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0.1, color="grey80", linetype="dotted")+
-  geom_rootedge(0.001)
+  geom_rootedge(0.001, size=0.01)
+
+ggsave("LantCama/outputs/LantCama_hamming_upgma.pdf",
+       hmt, width = 20, height = 30, units = "cm", dpi=600)
+
+
+####
+
+gl_unfiltered <- gl.read.dart(filename = "/Users/eilishmcmaster/Documents/LantCama/LantCama/dart_raw/Report_DLan23-8067_SNP_mapping_2.csv")
+
+samples_to_keep_80 <- read.csv('LantCama/meta/samples_to_keep_80%.csv', header=FALSE) %>% t() %>% as.vector()
+loci_to_keep_80 <- read.table('LantCama/meta/loci_to_keep_80%.csv', header=FALSE) %>% t() %>% as.vector()
+
+# gl <- gl.drop.pop() #remove listed populations
+# gl <- gl.keep.pop() #keep only the listed populations
+# gl <- gl.drop.ind() #remove listed individuals
+gl <- gl.keep.ind(gl_unfiltered,samples_to_keep_80) #keep only the listed individuals
+# gl <- gl.drop.loc() #remove listed loci
+indices <- which(gl$other$loc.metrics$AlleleID %in% loci_to_keep_80)
+
+gl <- gl.keep.loc(gl,gl$loc.names[indices]) #keep only the listed lo
+gl$other$loc.metrics$TrimmedSequence <- gl$other$loc.metrics$TrimmedSequenceSnp[indices]
+gl2fasta(gl,outfile = "output.fasta",outpath='/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen', method=3)
+
+sild <- read.csv('/Users/eilishmcmaster/Documents/LantCama/LantCama/dart_raw/Report-DLan23-8067/Report_DLan23-8067_4_moreOrders_SilicoDArT_1.csv', skip=6)
+View(sild)
+sild <- sild[sild$Reproducibility>0.96,]
+nrow(sild)
+
+sild2 <- sild[,11:ncol(sild)]
+sild2[sild2=='-'] <- NA
+sild2 <- as.matrix(sild2)
+unique(sild2)
+rowMeans(sild2, na.rm=TRUE)
