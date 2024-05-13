@@ -1,5 +1,31 @@
 library(RRtools)
+library(ade4)
+library(adegenet)
+library(ape)
+library(circlize)
+library(ComplexHeatmap)
+library(data.table)
+library(diveRsity)
+library(dplyr)
+library(geosphere)
+library(ggfortify)
+library(ggmap)
+library(ggrepel)
+library(ggpubr)
+library(ggthemes)
+library(ggtree)
+library(heatmaply)
+library(lattice)
+library(openxlsx)
+library(ozmaps)
+library(RColorBrewer)
+library(RRtools)
+library(SNPRelate)
+library(stringr)
+library(tanggle)
+library(tidyr)
 source('https://github.com/eilishmcmaster/SoS_functions/blob/33bd7065baa91b7e2a1800b6481d63573fb38d28/dart2svdquartets.r?raw=TRUE')
+devtools::source_url("https://github.com/eilishmcmaster/SoS_functions/blob/main/sos_functions.R?raw=TRUE")
 
 topskip   <- 6
 nmetavar  <- 18
@@ -13,15 +39,18 @@ basedir <- ""
 d1        <- new.read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetavar, euchits=FALSE)
 # qc1       <- report_dart_qc_stats(d1, basedir, species, dataset, threshold_missing_loci = 0.8)
 
-d2        <- exclude.samples(d1,by="file", excluded_sample_file = "LantCama/meta/Lcam4_sampfilt_missing80.txt")
+# d2        <- exclude.samples(d1,by="file", excluded_sample_file = "LantCama/meta/Lcam4_sampfilt_missing80.txt")
 
-meta      <- read.meta.data.full.analyses.df(d2, basedir, species, dataset)
-d3        <- dart.meta.data.merge(d2, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))])
-d3        <- remove.poor.quality.snps(d3, min_repro=0.96, max_missing=0.4)%>% remove.fixed.snps()
-dms        <- sample.one.snp.per.locus.random(d3, seed=12345) 
-dmsx <- remove.by.missingness(dms, 0.5)
+meta      <- read.meta.data.full.analyses.df(d1, basedir, species, dataset)
+d3        <- dart.meta.data.merge(d1, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))])
+d4        <- remove.poor.quality.snps(d3, min_repro=0.99, max_missing=0.8)%>% remove.fixed.snps()
+d4 <- remove.by.maf(d4, 0.02)
+dms        <- sample.one.snp.per.locus.random(d4, seed=12345) 
+dms <- remove.by.missingness(dms, 0.8)
 samples_to_keep_80 <- dms$sample_names
+length(samples_to_keep_80)
 loci_to_keep_80 <- colnames(dms$gt)
+length(loci_to_keep_80)
 
 write.table(samples_to_keep_80,'LantCama/meta/samples_to_keep_80%.csv', row.names = FALSE, col.names = FALSE)
 write.table(loci_to_keep_80,'LantCama/meta/loci_to_keep_80%.csv', row.names = FALSE, col.names = FALSE)
@@ -29,8 +58,17 @@ write.table(loci_to_keep_80,'LantCama/meta/loci_to_keep_80%.csv', row.names = FA
 m2 <- dms$meta$analyses %>% as.data.frame
 
 #### SVDq####
-# dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
 
+# dms_maf2 <- remove.by.maf(dms, 0.02)
+# dms_maf5 <- remove.by.maf(dms, 0.05)
+# 
+# dms_1000 <- remove.loci.randomly(dms,1000)
+# dms_5000 <- remove.loci.randomly(dms,5000)
+# dms_10000 <- remove.loci.randomly(dms,10000)
+# 
+# dms_maf22 <- remove.by.missingness(dms_maf2, 0.8)
+
+# dart2svdquartets(dms_maf2, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
 
 ####
 
@@ -48,11 +86,11 @@ library(pvclust)#https://cran.r-project.org/web/packages/pvclust/index.html
 
 library(tanggle)
 library(RSplitsTree)
-
-# splitstree(dist(dms$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80%missing.nex')
+# dms_1000 <- remove.by.missingness(dms_1000,0.8)
+# splitstree(dist(dms_maf2$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
 
 #need to open and save the file in Splitstree app for it to open here, IDK why
-Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80%missing.nex')
+Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
 
 x <- data.frame(x=Nnet$.plot$vertices[,1], y=Nnet$.plot$vertices[,2], 
                 sample=rep(NA, nrow(Nnet$.plot$vertices)))
@@ -63,13 +101,6 @@ x <- merge(x, m2, by="sample", all.x=TRUE, all.y=FALSE)
 net_x_axis <- max(x$x)-min(x$x)
 net_y_axis <- max(x$y)-min(x$y)
 
-
-
-# levels <- unique(dms$meta$analyses[,"morphid"]) %>% sort()
-# # Get the default ggplot colors for the levels
-# colors <- scales::hue_pal()(length(levels))
-# # Create a named list of colors
-# species_colours <- setNames(colors, levels)
 
 levels2 <- unique(dms$meta$analyses[,"national2"]) %>% sort()
 levels2_shapes <- setNames(1:nlevels(factor(levels2)), levels2)
@@ -94,7 +125,7 @@ splitstree_plot <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd
   theme(legend.position = "bottom", legend.key.size = unit(0.5, 'lines'))+coord_fixed()+
   guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
 
-ggsave("LantCama/outputs/LantCama_splitstree_nation_morpho.pdf",
+ggsave("LantCama/outputs/LantCama_splitstree_nation_morpho_80_maf2.pdf",
        splitstree_plot, width = 20, height = 20, units = "cm", dpi=600)
 
 splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd = NULL, 
@@ -103,7 +134,7 @@ splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slante
        ndigits = NULL)+
   geom_splitnet(layout = "slanted", size=0.2)+
   geom_point(data=x, aes(x, y, colour=cluster_histogram))+#shape=national2
-  scale_colour_manual(values= scales::hue_pal()(length(unique(x$cluster_histogram))), na.translate=FALSE, name='Morphotype')+
+  scale_colour_manual(values= named_list_maker(x$cluster_histogram, 'Paired',11), na.translate=FALSE)+
   # scale_shape_manual(values=levels2_shapes, na.translate=FALSE, name='Country')+
   # geom_tiplab2(aes(label=label), size=2, hjust=-0.2)+
   theme_void()+labs(color="", shape="")+
@@ -112,25 +143,15 @@ splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slante
   theme(legend.position = "bottom")+coord_fixed()+
   guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
 
-ggsave("LantCama/outputs/LantCama_splitstree_cluster.pdf",
+ggsave("LantCama/outputs/LantCama_splitstree_cluster_80miss_maf2.pdf",
        splitstree_plot_cluster, width = 20, height = 30, units = "cm", dpi=600)
-# 
-# 
-# tree_tree_plot <- ggarrange(splitstree_plot, ggtree_plot, ncol=2, labels=c("D", "E"), legend="none")
-# pca_tree_tree_plot <- ggarrange(all3_pca_plots,NULL, tree_tree_plot, nrow=3, heights=c(1.25,0.1,2))&
-#   theme(plot.background = element_rect(fill = "white"))+border("white")
-# pca_tree_tree_plot
-# 
-# 
-# ggsave("LantCama/outputs/paper/fig2_LantCama_pca_tree_tree.pdf",
-#        pca_tree_tree_plot, width = 18, height = 18, units = "cm", dpi=600)
 
 ###### TREE ########
 
 library(phangorn)
 
 #hamming distance
-genetic_distances <- dist(dmsx$gt, method = "binary")
+genetic_distances <- dist(dms_maf2$gt, method = "binary")
 tree <- upgma(genetic_distances)
 # tree <- nj(genetic_distances)
 # tree <- wpgma(genetic_distances)
@@ -140,16 +161,6 @@ ggtree_obj <- ggtree(tree)
 x1 <- m2[m2$sample %in% ggtree_obj$data$label,]
 rownames(x1) <- x1$sample
 
-# Assuming you already have the ggtree object ggtree_obj and tree object
-# 
-# # Plot the tree with modified branch width and distances on x-axis
-# ggtree_obj <- ggtree(tree, layout="circular") %<+% x1 +
-#   geom_tippoint(aes(color = morphid2, shape=national2), size=1) +  
-#   # scale_colour_manual(values=morphid_colours, na.translate=FALSE, name='Morphotype')+
-#   scale_shape_manual(values=c(16,17), na.translate=FALSE, name='Country')
-# 
-# ggsave("LantCama/outputs/LantCama_hamming_upgma.pdf",
-#        ggtree_obj, width = 30, height = 60, units = "cm", dpi=600)
 
 ggtree_obj <- ggtree(tree, size=0.01) %<+% x1 
 # geom_tippoint(aes(color = cluster, shape=national2), size=0.7) + theme_tree2()
@@ -159,24 +170,93 @@ cc <-   named_list_maker(x1$cluster_histogram, 'Spectral',11)
 cc2 <- named_list_maker(x1$cluster, 'Paired',11)
 cc2 <- named_list_maker(x1$national2, 'Paired',11)
 
-hmt <-  gheatmap(ggtree_obj, x1[,c('cluster_histogram','morphid2','national2')],
-                 offset=0, width=.1,font.size=2,colnames_offset_y=c(10,15,10),
-                 custom_column_labels=c("Cluster","Morphotype","Country"),
+hmt <-  gheatmap(ggtree_obj, as.matrix(x1[,c('cluster_histogram','cluster2')]),
+                 offset=0, width=.1,font.size=2,
                  colnames_angle=90, colnames_position="top")+
-  scale_fill_manual(values=c(cc,cc2, morphid_colours))+
-  theme_tree2()+theme(legend.position = "none")+
+  scale_fill_manual(values=named_list_maker(x$cluster_histogram, 'Paired',11))+
+  theme_tree2()+
+  # theme(legend.position = "right")+
   scale_y_continuous(expand=c(0.02, 0))+
   geom_vline(xintercept = 0.05, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0.1, color="grey80", linetype="dotted")+
   geom_rootedge(0.001, size=0.01)
 
-ggsave("LantCama/outputs/LantCama_hamming_upgma.pdf",
+ggsave("LantCama/outputs/LantCama_hamming_upgma_maf2.pdf",
        hmt, width = 20, height = 30, units = "cm", dpi=600)
 
 
-####
+hmt <-  gheatmap(ggtree_obj, x1[,c('cluster_histogram','morphid2','national2')],
+                 offset=0, width=.1,font.size=2,colnames_offset_y=c(10,15,10),
+                 custom_column_labels=c("Cluster","Morphotype","Country"),
+                 colnames_angle=90, colnames_position="top")+
+  scale_fill_manual(values=c(cc,cc2, morphid_colours))+
+  theme_tree2()+
+  theme(legend.position = "none")+
+  scale_y_continuous(expand=c(0.02, 0))+
+  geom_vline(xintercept = 0.05, color="grey80", linetype="dotted")+
+  geom_vline(xintercept = 0, color="grey80", linetype="dotted")+
+  geom_vline(xintercept = 0.1, color="grey80", linetype="dotted")+
+  geom_rootedge(0.001, size=0.01)
 
+ggsave("LantCama/outputs/LantCama_hamming_upgma_all_maf2.pdf",
+       hmt, width = 20, height = 30, units = "cm", dpi=600)
+
+#### pca ####
+# dms_5000 <- remove.loci.randomly(dms, 5000)
+
+gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
+gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
+
+g_pca_df <- gen_pca[["scores"]] #extract PCs
+g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # some in DArT are not in meta?
+
+pcnames <- paste0(colnames(g_pca_df)," (",
+                  paste(round(gen_pca[["eig"]][1:6]/sum(gen_pca[["eig"]]) *100, 2)),
+                  "%)") #create names for axes
+
+pca_plot1 <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=morphid2))+ xlab(pcnames[1])+ylab(pcnames[2])+
+  geom_point(size=2)+
+  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+  labs(colour="", shape="")+
+  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+        legend.text = element_text(face="italic"),
+        axis.title = element_text(size=10), axis.text = element_text(size=8))+
+  guides(colour = guide_legend(title.position = "top"))+#+
+  scale_colour_manual(values=morphid_colours)
+# scale_shape_manual(values=cluster2ecies_shapes)
+pca_plot1
+
+pca_plot2 <- ggplot(g_pca_df2, aes(x=PC3, y=PC4, colour=cluster2, shape=national2))+ xlab(pcnames[3])+ylab(pcnames[4])+
+  geom_point(size=2)+
+  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+  labs(colour="", shape="")+
+  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+        legend.text = element_text(face="italic"),
+        axis.title = element_text(size=10), axis.text = element_text(size=8))+
+  guides(colour = guide_legend(title.position = "top"))
+# scale_colour_manual(values=cluster2ecies_colours)+
+# scale_shape_manual(values=cluster2ecies_shapes)
+
+pca_plot3 <- ggplot(g_pca_df2, aes(x=PC5, y=PC6, colour=cluster2, shape=national2))+ xlab(pcnames[5])+ylab(pcnames[6])+
+  geom_point(size=2)+
+  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+  labs(colour="", shape="")+
+  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+        legend.text = element_text(face="italic"),
+        axis.title = element_text(size=10), axis.text = element_text(size=8))+
+  guides(colour = guide_legend(title.position = "top"))
+# scale_colour_manual(values=cluster2ecies_colours)+
+# scale_shape_manual(values=cluster2ecies_shapes)
+
+all3_pca_plots <- ggarrange(pca_plot1, pca_plot2, pca_plot3, labels=c("A","B","C"),
+                            common.legend = TRUE, ncol=3, legend = "bottom")
+all3_pca_plots
+
+
+
+###
+library(dartR)
 gl_unfiltered <- gl.read.dart(filename = "/Users/eilishmcmaster/Documents/LantCama/LantCama/dart_raw/Report_DLan23-8067_SNP_mapping_2.csv")
 
 samples_to_keep_80 <- read.csv('LantCama/meta/samples_to_keep_80%.csv', header=FALSE) %>% t() %>% as.vector()
