@@ -44,9 +44,10 @@ d1        <- new.read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetava
 meta      <- read.meta.data.full.analyses.df(d1, basedir, species, dataset)
 d3        <- dart.meta.data.merge(d1, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))])
 d4        <- remove.poor.quality.snps(d3, min_repro=0.99, max_missing=0.8)%>% remove.fixed.snps()
-d4 <- remove.by.maf(d4, 0.02)
-dms        <- sample.one.snp.per.locus.random(d4, seed=12345) 
-dms <- remove.by.missingness(dms, 0.8)
+d5        <- sample.one.snp.per.locus.random(d4, seed=12345) 
+d6 <- remove.by.maf(d5, 0.02)
+dms <- remove.by.missingness(d6, 0.8)
+
 samples_to_keep_80 <- dms$sample_names
 length(samples_to_keep_80)
 loci_to_keep_80 <- colnames(dms$gt)
@@ -77,7 +78,7 @@ m2 <- dms$meta$analyses %>% as.data.frame
 # hclust_avg <- hclust(dist(dms$gt), method = 'average')
 # plot(hclust_avg)
 # library(ggtree)
-library(pvclust)#https://cran.r-project.org/web/packages/pvclust/index.html
+# library(pvclust)#https://cran.r-project.org/web/packages/pvclust/index.html
 # 
 # result <- pvclust(dms$gt, method.dist="euclidean", method.hclust="average", nboot=10, parallel=TRUE)
 
@@ -87,7 +88,7 @@ library(pvclust)#https://cran.r-project.org/web/packages/pvclust/index.html
 library(tanggle)
 library(RSplitsTree)
 # dms_1000 <- remove.by.missingness(dms_1000,0.8)
-# splitstree(dist(dms_maf2$gt), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
+# splitstree(dist(dms$gt, method = "euclidean"), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
 
 #need to open and save the file in Splitstree app for it to open here, IDK why
 Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
@@ -146,12 +147,33 @@ splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slante
 ggsave("LantCama/outputs/LantCama_splitstree_cluster_80miss_maf2.pdf",
        splitstree_plot_cluster, width = 20, height = 30, units = "cm", dpi=600)
 
+
+splitstree_plot_svdq <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd = NULL, 
+                                  as.Date = FALSE, yscale = "none", yscale_mapping = NULL, 
+                                  ladderize = FALSE, right = FALSE, branch.length = "branch.length", 
+                                  ndigits = NULL)+
+  geom_splitnet(layout = "slanted", size=0.2)+
+  geom_point(data=x, aes(x, y, colour=svdq_pop))+#shape=national2
+  scale_colour_manual(values= named_list_maker(x$svdq_pop, 'Paired',11), na.translate=FALSE)+
+  # scale_shape_manual(values=levels2_shapes, na.translate=FALSE, name='Country')+
+  geom_tiplab2(aes(label=label), size=0.75)+
+  theme_void()+labs(color="", shape="")+
+  expand_limits(x=c(min(x$x)-0.01*net_x_axis, max(x$x)+0.01*net_x_axis),
+                y=c(min(x$y)-0.01*net_y_axis, max(x$y)+0.01*net_y_axis))+
+  theme(legend.position = "bottom")+coord_fixed()+
+  guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
+
+ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.pdf",
+       splitstree_plot_svdq, width = 20, height = 30, units = "cm", dpi=600)
+
 ###### TREE ########
 
 library(phangorn)
 
 #hamming distance
-genetic_distances <- dist(dms_maf2$gt, method = "binary")
+# genetic_distances <- dist(dms$gt, method = "binary")
+genetic_distances <- dist(dms$gt, method = "euclidean")
+
 tree <- upgma(genetic_distances)
 # tree <- nj(genetic_distances)
 # tree <- wpgma(genetic_distances)
@@ -170,37 +192,38 @@ cc <-   named_list_maker(x1$cluster_histogram, 'Spectral',11)
 cc2 <- named_list_maker(x1$cluster, 'Paired',11)
 cc2 <- named_list_maker(x1$national2, 'Paired',11)
 
-hmt <-  gheatmap(ggtree_obj, as.matrix(x1[,c('cluster_histogram','cluster2')]),
-                 offset=0, width=.1,font.size=2,
+hmt <-  gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop','national2')]),
+                 offset=0.005, width=.1,font.size=2,
                  colnames_angle=90, colnames_position="top")+
-  scale_fill_manual(values=named_list_maker(x$cluster_histogram, 'Paired',11))+
+  # scale_fill_manual(values=named_list_maker(x$svdq_pop, 'Paired',11))+
   theme_tree2()+
   # theme(legend.position = "right")+
   scale_y_continuous(expand=c(0.02, 0))+
   geom_vline(xintercept = 0.05, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0.1, color="grey80", linetype="dotted")+
-  geom_rootedge(0.001, size=0.01)
-
-ggsave("LantCama/outputs/LantCama_hamming_upgma_maf2.pdf",
+  geom_rootedge(0.001, size=0.01)+
+  geom_tiplab(aes(label = label), size=0.75)  # Add this line to include tip labels
+ggsave("LantCama/outputs/LantCama_euclidean_upgma_maf2.pdf",
        hmt, width = 20, height = 30, units = "cm", dpi=600)
 
 
 hmt <-  gheatmap(ggtree_obj, x1[,c('cluster_histogram','morphid2','national2')],
-                 offset=0, width=.1,font.size=2,colnames_offset_y=c(10,15,10),
+                 offset=0.005, width=.1,font.size=2,colnames_offset_y=c(10,15,10),
                  custom_column_labels=c("Cluster","Morphotype","Country"),
                  colnames_angle=90, colnames_position="top")+
   scale_fill_manual(values=c(cc,cc2, morphid_colours))+
   theme_tree2()+
-  theme(legend.position = "none")+
+  theme(legend.position = "right")+
   scale_y_continuous(expand=c(0.02, 0))+
   geom_vline(xintercept = 0.05, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0, color="grey80", linetype="dotted")+
   geom_vline(xintercept = 0.1, color="grey80", linetype="dotted")+
-  geom_rootedge(0.001, size=0.01)
+  geom_rootedge(0.001, size=0.01)+
+  geom_tiplab(aes(label = label), size=0.75)  # Add this line to include tip labels
 
-ggsave("LantCama/outputs/LantCama_hamming_upgma_all_maf2.pdf",
-       hmt, width = 20, height = 30, units = "cm", dpi=600)
+ggsave("LantCama/outputs/LantCama_euclidean_upgma_all_maf2.pdf",
+       hmt, width = 30, height = 35, units = "cm", dpi=600)
 
 #### pca ####
 # dms_5000 <- remove.loci.randomly(dms, 5000)
