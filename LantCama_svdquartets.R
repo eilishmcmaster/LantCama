@@ -60,7 +60,7 @@ write.table(loci_to_keep_80,'LantCama/meta/loci_to_keep_80%.csv', row.names = FA
 # meta      <- read.meta.data.full.analyses.df(dms, basedir, species, dataset)
 # dms        <- dart.meta.data.merge(dms, meta) 
 
-m2 <- dms$meta$analyses %>% as.data.frame
+m2 <- d3$meta$analyses %>% as.data.frame
 
 #### SVDq####
 
@@ -79,7 +79,7 @@ m2 <- dms$meta$analyses %>% as.data.frame
 svdq_pop_eilish <- dms$meta$analyses[,'svdq_pop']
 svdq_pop_eilish[which(is.na(svdq_pop_eilish))] <- dms$sample_names[which(is.na(svdq_pop_eilish))]
 dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
-dart2snapp(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
+# dart2snapp(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
 
 svdq_pop_pat <- dms$meta$analyses[,'svdq_pop2']
 svdq_pop_pat[which(is.na(svdq_pop_pat))] <- dms$sample_names[which(is.na(svdq_pop_pat))]
