@@ -109,15 +109,20 @@ library(tanggle)
 library(RSplitsTree)
 # dms_1000 <- remove.by.missingness(dms_1000,0.8)
 # splitstree(dist(dms$gt, method = "euclidean"), 'LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
+library(ggplot2)
+library(phangorn)
+library(ggforce)
 
-#need to open and save the file in Splitstree app for it to open here, IDK why
+# Read network data from Nexus file
 Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
+
 
 x <- data.frame(x=Nnet$.plot$vertices[,1], y=Nnet$.plot$vertices[,2], 
                 sample=rep(NA, nrow(Nnet$.plot$vertices)))
 
 x[Nnet$translate$node,"sample"] <- Nnet$translate$label
 x <- merge(x, m2, by="sample", all.x=TRUE, all.y=FALSE)
+x$svdq_pop[!is.na(x$sample)&is.na(x$svdq_pop)] <- "ungrouped"
 
 net_x_axis <- max(x$x)-min(x$x)
 net_y_axis <- max(x$y)-min(x$y)
@@ -126,67 +131,40 @@ net_y_axis <- max(x$y)-min(x$y)
 levels2 <- unique(dms$meta$analyses[,"national2"]) %>% sort()
 levels2_shapes <- setNames(1:nlevels(factor(levels2)), levels2)
 
+hull <- x %>% group_by(svdq_pop) %>% 
+  slice(chull(x, y))
 
-#set up colours (Tol colour palette)
+hull <- hull[!hull$svdq_pop=='ungrouped',]
+
+svdq_pop_colours <- named_list_maker(m2$svdq_pop, 'Spectral', 11)
+svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
 morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
 
+x_filtered <- x[!is.na(x$national2),]
 
-splitstree_plot <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd = NULL, 
-                          as.Date = FALSE, yscale = "none", yscale_mapping = NULL, 
-                          ladderize = FALSE, right = FALSE, branch.length = "branch.length", 
-                          ndigits = NULL)+
-  geom_splitnet(layout = "slanted", size=0.2, color='grey20')+
-  geom_point(data=x, aes(x, y, colour=morphid2, shape=national2), size=1, fill="white")+#shape=national2
-  scale_colour_manual(values=morphid_colours, na.translate=FALSE, name='Morphotype')+
-  scale_shape_manual(values=c(16,17), na.translate=FALSE, name='Country')+
-  # geom_tiplab2(aes(label=label), size=2, hjust=-0.2)+
-  theme_void()+
-  expand_limits(x=c(min(x$x)-0.01*net_x_axis, max(x$x)+0.01*net_x_axis),
-                y=c(min(x$y)-0.01*net_y_axis, max(x$y)+0.01*net_y_axis))+
-  theme(legend.position = "bottom", legend.key.size = unit(0.5, 'lines'))+coord_fixed()+
-  guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
-
-ggsave("LantCama/outputs/LantCama_splitstree_nation_morpho_80_maf2.pdf",
-       splitstree_plot, width = 20, height = 20, units = "cm", dpi=600)
-
-splitstree_plot_cluster <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd = NULL, 
-       as.Date = FALSE, yscale = "none", yscale_mapping = NULL, 
-       ladderize = FALSE, right = FALSE, branch.length = "branch.length", 
-       ndigits = NULL)+
-  geom_splitnet(layout = "slanted", size=0.2)+
-  geom_point(data=x, aes(x, y, colour=cluster_histogram))+#shape=national2
-  scale_colour_manual(values= named_list_maker(x$cluster_histogram, 'Paired',11), na.translate=FALSE)+
-  # scale_shape_manual(values=levels2_shapes, na.translate=FALSE, name='Country')+
-  # geom_tiplab2(aes(label=label), size=2, hjust=-0.2)+
-  theme_void()+labs(color="", shape="")+
-  expand_limits(x=c(min(x$x)-0.01*net_x_axis, max(x$x)+0.01*net_x_axis),
-                y=c(min(x$y)-0.01*net_y_axis, max(x$y)+0.01*net_y_axis))+
-  theme(legend.position = "bottom")+coord_fixed()+
-  guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
-
-ggsave("LantCama/outputs/LantCama_splitstree_cluster_80miss_maf2.pdf",
-       splitstree_plot_cluster, width = 20, height = 30, units = "cm", dpi=600)
-
-
-splitstree_plot_svdq <- ggplot(Nnet, mapping = aes_(~x, ~y), layout = "slanted", mrsd = NULL, 
-                                  as.Date = FALSE, yscale = "none", yscale_mapping = NULL, 
-                                  ladderize = FALSE, right = FALSE, branch.length = "branch.length", 
-                                  ndigits = NULL)+
-  geom_splitnet(layout = "slanted", size=0.2)+
-  geom_point(data=x, aes(x, y, colour=svdq_pop, shape=national2), size=1)+#shape=national2
-  scale_colour_manual(values= named_list_maker(x$svdq_pop, 'Paired',11), na.translate=FALSE)+
-  # scale_shape_manual(values=levels2_shapes, na.translate=FALSE, name='Country')+
-  # geom_tiplab2(aes(label=label), size=0.75)+
-  theme_void()+labs(color="", shape="")+
-  expand_limits(x=c(min(x$x)-0.01*net_x_axis, max(x$x)+0.01*net_x_axis),
-                y=c(min(x$y)-0.01*net_y_axis, max(x$y)+0.01*net_y_axis))+
-  theme(legend.position = "bottom")+coord_fixed()+
-  guides(colour = guide_legend(title.position = "top", nrow = 3), shape = guide_legend(title.position = "top", nrow = 4))
-
+splitstree_plot_svdq <- ggplot(Nnet, aes(x = x, y = y)) +
+  geom_shape(data = hull, alpha = 0.7, expand = 0.01, radius = 0.01,
+             aes(fill = svdq_pop, color = "transparent")) +
+  geom_point(data = x_filtered, aes(shape = national2), color="white", size=2) +
+  geom_splitnet(layout = "slanted", size = 0.2) +
+  geom_point(data = x_filtered, aes(color = morphid2, shape = national2)) +
+  scale_fill_manual(values = svdq_pop_colours, na.translate = FALSE) +
+  scale_colour_manual(values = morphid_colours, na.translate = FALSE) +
+  theme_void() +
+  expand_limits(x = c(min(x_filtered$x) - 0.01 * net_x_axis, max(x_filtered$x) + 0.01 * net_x_axis),
+                y = c(min(x_filtered$y) - 0.01 * net_y_axis, max(x_filtered$y) + 0.01 * net_y_axis)) +
+  theme(legend.position = "bottom", legend.key = element_blank()) +
+  coord_fixed() +
+  labs(color = "Morphotype", shape = "Origin", fill = "SVDq clusters") +
+  guides(colour = guide_legend(title.position = "top", nrow = 2, override.aes = list(fill = NA, linetype = 0)), 
+         fill = guide_legend(title.position = "top", nrow = 2, override.aes = list(color = NA)),
+         shape = guide_legend(title.position = "top", nrow = 2))
+# Save the plot
 ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.pdf",
-       splitstree_plot_svdq, width = 20, height = 30, units = "cm", dpi=600)
+       splitstree_plot_svdq, width = 20, height = 20, units = "cm", dpi = 600)
 
-
+ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.png",
+       splitstree_plot_svdq, width = 20, height = 20, units = "cm", dpi = 600)
 
 ###### TREE ########
 
