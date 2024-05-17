@@ -14,7 +14,10 @@ m2 <- read.xlsx('/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/LantCama
 x1 <- m2[m2$sample %in% ggtree_obj$data$label,]
 rownames(x1) <- x1$sample
 
-svdq_pop_colours <-   named_list_maker(x1$svdq_pop, 'Spectral',11)
+# svdq_pop_colours <-   named_list_maker(x1$svdq_pop_label, 'Spectral',11)
+svdq_pop_colours <- colorRampPalette(c("grey20", "grey90"))(7)
+names(svdq_pop_colours) <- 1:7
+svdq_pop_colours <- c(c(eacp="#AA3377", per1="#228833",  eawt="#66CCEE"),svdq_pop_colours)
 nation_colours <- named_list_maker(x1$national2, 'Paired',11)
 morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
 
@@ -23,11 +26,11 @@ morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCE
 
 ggtree_obj <- ggtree(upgma, size=0.3, layout="roundrect") %<+% x1 
 
-hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop','morphid2','national2')]),
+hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop_label','morphid2','national2')]),
                 offset=0.0006, width=.05, font.size=0,
                 colnames_angle=90, colnames_position="top",
                 custom_column_labels=c("SVDq cluster","Country"), hjust=0) +
-  scale_fill_manual(values=c(svdq_pop_colours,nation_colours, morphid_colours), na.value = "grey90") +
+  scale_fill_manual(values=c(svdq_pop_colours,nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size=0.8) +
   geom_rootedge(0.0005, size=0.3)+
@@ -42,9 +45,9 @@ custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),
                         legend.title = element_text(size = 8),
                         legend.text = element_text(size = 6))
 # Create separate ggplots for each fill scheme
-plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=svdq_pop)) +
+plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=svdq_pop_label)) +
   geom_tile() +
-  scale_fill_manual(name = "SVDq cluster", values = svdq_pop_colours, na.value = "grey90") +
+  scale_fill_manual(name = "SVDq cluster", values = svdq_pop_colours, na.value = "white") +
   custom_legend_theme
 
 plot_national2 <- ggplot(m2, aes(x=long,y=lat, fill=national2)) +
@@ -86,7 +89,9 @@ ggsave("LantCama/outputs/LantCama_upgma_maf2.png",
 #### collapsed tree ####
 
 # Create nodes.identity as a named vector with names and values separately
-nodes.identity <- c("nqor", "bnor", "ghwy", "bjre", "per1_B", "per1_C", "per1_A", "red", "eacp", "eawt")
+# nodes.identity <- c("nqor", "bnor", "ghwy", "bjre", "per1_B", "per1_C", "per1_A", "red", "eacp", "eawt")
+nodes.identity <- c("7", "6", "5", "4", "3", "2", "per1", "1", "eacp", "eawt")
+
 names(nodes.identity) <- c(1030, 1050, 873, 896, 904, 938, 953, 821, 554, 673)
 
 
@@ -122,11 +127,11 @@ ggtree_obj2 <- Reduce(scaleMyClade, nodes.to.collapse, ggtree_obj)
 ggtree_obj2 <- Reduce(collapseMyClade, nodes.to.collapse, ggtree_obj2)
 
 # Add gheatmap and additional layers as required
-hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('svdq_pop', 'morphid2','national2')]),
+hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c( 'morphid2','national2')]),#'svdq_pop_label',
                  offset = 0.001, width = .1, font.size = 0,
                  colnames_angle = 90, colnames_position = "top",
                  custom_column_labels = c("SVDq cluster", "Country"), hjust = 0) +
-  scale_fill_manual(values = c(svdq_pop_colours,nation_colours, morphid_colours), na.value = "grey90") +
+  scale_fill_manual(values = c(svdq_pop_colours,nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size = 0.8) +
   geom_rootedge(0.0005, size = 0.3) +
@@ -147,3 +152,54 @@ ggsave("LantCama/outputs/LantCama_upgma_maf2_collapsed.pdf",
 
 ggsave("LantCama/outputs/LantCama_upgma_maf2_collapsed.png",
        combined_plot, width = 15, height = 20, units = "cm", dpi=600)
+
+#### networ ####
+
+Nnet <- phangorn::read.nexus.networx('LantCama/outputs/all_LantCama_nexus_file_for_R_80missing_maf2.nex')
+
+
+x <- data.frame(x=Nnet$.plot$vertices[,1], y=Nnet$.plot$vertices[,2], 
+                sample=rep(NA, nrow(Nnet$.plot$vertices)))
+
+x[Nnet$translate$node,"sample"] <- Nnet$translate$label
+x <- merge(x, m2, by="sample", all.x=TRUE, all.y=FALSE)
+x$svdq_pop_label[!is.na(x$sample)&is.na(x$svdq_pop_label)] <- "ungrouped"
+
+net_x_axis <- max(x$x)-min(x$x)
+net_y_axis <- max(x$y)-min(x$y)
+
+
+levels2 <- unique(dms$meta$analyses[,"national2"]) %>% sort()
+levels2_shapes <- setNames(1:nlevels(factor(levels2)), levels2)
+
+hull <- x %>% group_by(svdq_pop_label) %>% 
+  slice(chull(x, y))
+
+hull <- hull[!hull$svdq_pop_label=='ungrouped',]
+
+x_filtered <- x[!is.na(x$national2),]
+
+splitstree_plot_svdq <- ggplot(Nnet, aes(x = x, y = y)) +
+  geom_shape(data = hull, alpha = 0.7, expand = 0.01, radius = 0.01,
+             aes(fill = svdq_pop_label, color = "transparent")) +
+  geom_point(data = x_filtered, aes(shape = national2), color="white", size=2) +
+  geom_splitnet(layout = "slanted", size = 0.2) +
+  geom_point(data = x_filtered, aes(color = morphid2, shape = national2)) +
+  scale_fill_manual(values = svdq_pop_colours, na.translate = FALSE) +
+  scale_colour_manual(values = morphid_colours, na.translate = FALSE) +
+  theme_void() +
+  expand_limits(x = c(min(x_filtered$x) - 0.01 * net_x_axis, max(x_filtered$x) + 0.01 * net_x_axis),
+                y = c(min(x_filtered$y) - 0.01 * net_y_axis, max(x_filtered$y) + 0.01 * net_y_axis)) +
+  theme(legend.position = "bottom", legend.key = element_blank()) +
+  coord_fixed() +
+  labs(color = "Morphotype", shape = "Origin", fill = "SVDq clusters") +
+  guides(colour = guide_legend(title.position = "top", nrow = 2, override.aes = list(fill = NA, linetype = 0)), 
+         fill = guide_legend(title.position = "top", nrow = 2, override.aes = list(color = NA)),
+         shape = guide_legend(title.position = "top", nrow = 2))
+# Save the plot
+ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.pdf",
+       splitstree_plot_svdq, width = 20, height = 20, units = "cm", dpi = 600)
+
+ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.png",
+       splitstree_plot_svdq, width = 20, height = 20, units = "cm", dpi = 600)
+
