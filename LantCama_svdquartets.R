@@ -75,15 +75,15 @@ m2 <- d3$meta$analyses %>% as.data.frame
 
 # dart2svdquartets(dms_maf2, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
 
-
-svdq_pop_eilish <- dms$meta$analyses[,'svdq_pop']
-svdq_pop_eilish[which(is.na(svdq_pop_eilish))] <- dms$sample_names[which(is.na(svdq_pop_eilish))]
-dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
+# 
+# svdq_pop_eilish <- dms$meta$analyses[,'svdq_pop_eilish']
+# svdq_pop_eilish[which(is.na(svdq_pop_eilish))] <- dms$sample_names[which(is.na(svdq_pop_eilish))]
+dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=dms$meta$analyses[,'svdq_pop_eilish'])
 # dart2snapp(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
 
-svdq_pop_pat <- dms$meta$analyses[,'svdq_pop2']
-svdq_pop_pat[which(is.na(svdq_pop_pat))] <- dms$sample_names[which(is.na(svdq_pop_pat))]
-dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_pat)
+# svdq_pop_pat <- dms$meta$analyses[,'svdq_pop2']
+# svdq_pop_pat[which(is.na(svdq_pop_pat))] <- dms$sample_names[which(is.na(svdq_pop_pat))]
+# dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_pat)
 
 
 #### iqtree ####

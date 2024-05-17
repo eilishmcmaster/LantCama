@@ -14,8 +14,8 @@ cc <-   named_list_maker(x1$svdq_pop, 'Spectral',11)
 cc2 <- named_list_maker(x1$national2, 'Paired',11)
 
 ggtree_obj <- ggtree(mrbayes, size=0.3) %<+% x1 
-# ggtree_obj <- ggtree_obj%>% scaleClade(545, .2) %>%
-#   collapse(545,"max")
+ggtree_obj <- ggtree_obj%>%
+  collapse(545,"max")
 
 hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop','national2')]),
                 offset=0.025, width=.05, font.size=0,
