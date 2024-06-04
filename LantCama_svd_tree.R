@@ -4,7 +4,7 @@ library(ggplot2)
 # svdq <- treeio::read.svdq('/Users/eilishmcmaster/Documents/LantCama/svdq/lantana_eilish_mrbayes_full/infile.nex.con.tre')
 # svdq@data[["prob"]] <- round(as.numeric(svdq@data[["prob"]]), 2)
 
-svdq <- read.tree('/Users/eilishmcmaster/Documents/LantCama/svdquartets/20240515_LantCama_DLan23-8067_80miss_2maf_boot2.tre')
+svdq <- read.tree('/Users/eilishmcmaster/Documents/LantCama/svdquartets/20240517_LantCama_DLan23-8067_80miss_2maf_boot2.tre')
 svdq$node.label <- as.numeric(svdq$node.label)
 ggtree_obj <- ggtree(svdq)
 m2 <- read.xlsx('/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/LantCama_DLan23-8067_meta.xlsx')

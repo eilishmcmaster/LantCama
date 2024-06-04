@@ -24,7 +24,7 @@ morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCE
 
 #### full tree ####
 
-ggtree_obj <- ggtree(upgma, size=0.3, layout="roundrect") %<+% x1 
+ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1 
 
 hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop_label','morphid2','national2')]),
                 offset=0.0006, width=.05, font.size=0,
@@ -73,8 +73,9 @@ legend_prob <- cowplot::get_legend(plot_prob)
 legend_morphid2 <- cowplot::get_legend(plot_morphid2)
 
 
-legends <- cowplot::plot_grid(legend_prob,legend_svdq_pop, legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 8/1) # Adjust aspect 
-legends2 <- cowplot::plot_grid(legend_svdq_pop, legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 5/1) # Adjust aspect 
+
+legends <- cowplot::plot_grid(legend_prob, legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 5/1) # Adjust aspect 
+legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 3/1) # Adjust aspect 
 
 
 combined_plot <- cowplot::plot_grid(hmt, legends,nrow = 1, rel_widths = c(1, 0.15))
@@ -136,7 +137,7 @@ hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c( 'morphid2','national2')]),#'svdq_
   geom_tiplab(aes(label = label), size = 0.8) +
   geom_rootedge(0.0005, size = 0.3) +
   theme(legend.position = "none", plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
-  geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 80),
+  geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
               color='red', nudge_x = -0.0003,nudge_y=1.1, label.size=0, fill="transparent", size=1.5)
   # geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
 
