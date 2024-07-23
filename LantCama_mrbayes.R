@@ -34,10 +34,10 @@ hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop_label','morphid2','nationa
   geom_tiplab(aes(label = label), size=0.8,align=TRUE,linetype='dotted',linesize = .2) +
   geom_rootedge(0.01, size=0.3)+
   # geom_label2(data=mrbayes, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
-  # geom_label2(data=mrbayes, aes(label=prob, subset = !is.na(as.numeric(prob)) & as.numeric(prob) > .5),
-  # color='red', nudge_x = 0.0004, label.size=0, fill="transparent", size=1) +
-  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
-geom_nodepoint(aes(color=as.numeric(prob)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
+  geom_label2(data=mrbayes, aes(label=prob, subset = !is.na(as.numeric(prob)) & as.numeric(prob) > .5),
+  color='red', nudge_x = 0.0004, label.size=0, fill="transparent", size=1) +
+  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))
+# geom_nodepoint(aes(color=as.numeric(prob)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
 
 
 custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),

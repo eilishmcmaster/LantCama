@@ -56,52 +56,18 @@ length(loci_to_keep_80)
 write.table(samples_to_keep_80,'LantCama/meta/samples_to_keep_80%.csv', row.names = FALSE, col.names = FALSE)
 write.table(loci_to_keep_80,'LantCama/meta/loci_to_keep_80%.csv', row.names = FALSE, col.names = FALSE)
 
-# 
-# meta      <- read.meta.data.full.analyses.df(dms, basedir, species, dataset)
-# dms        <- dart.meta.data.merge(dms, meta) 
-
 m2 <- d3$meta$analyses %>% as.data.frame
 
-#### SVDq####
+#### write input for phylo trees ####
 
-# dms_maf2 <- remove.by.maf(dms, 0.02)
-# dms_maf5 <- remove.by.maf(dms, 0.05)
-# 
-# dms_1000 <- remove.loci.randomly(dms,1000)
-# dms_5000 <- remove.loci.randomly(dms,5000)
-# dms_10000 <- remove.loci.randomly(dms,10000)
-# 
-# dms_maf22 <- remove.by.missingness(dms_maf2, 0.8)
+# for iqtree and mrbayes
+dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
 
-# dart2svdquartets(dms_maf2, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
-
-# 
+# for svdq
 svdq_pop_eilish <- dms$meta$analyses[,'svdq_pop_label']
 svdq_pop_eilish[which(is.na(svdq_pop_eilish))] <- dms$sample_names[which(is.na(svdq_pop_eilish))]
 dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
-# dart2snapp(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_eilish)
 
-# svdq_pop_pat <- dms$meta$analyses[,'svdq_pop2']
-# svdq_pop_pat[which(is.na(svdq_pop_pat))] <- dms$sample_names[which(is.na(svdq_pop_pat))]
-# dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=svdq_pop_pat)
-
-
-#### iqtree ####
-
-gl_unfiltered <- gl.read.dart(filename = "/Users/eilishmcmaster/Documents/LantCama/LantCama/dart_raw/Report_DLan23-8067_SNP_mapping_2.csv", 
-                              ind.metafile = '/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/LantCama_DLan23-8067_meta.csv')
-
-samples_to_keep_80 <- read.csv('LantCama/meta/samples_to_keep_80%.csv', header=FALSE) %>% t() %>% as.vector()
-loci_to_keep_80 <- read.table('LantCama/meta/loci_to_keep_80%.csv', header=FALSE) %>% t() %>% as.vector()
-
-gl <- gl.keep.ind(gl_unfiltered,samples_to_keep_80) #keep only the listed individuals
-indices <- which(gl$other$loc.metrics$AlleleID %in% loci_to_keep_80)
-gl <- gl.keep.loc(gl,gl$loc.names[indices]) #keep only the listed lo
-
-gl@pop <- gl@other[["ind.metrics"]][["svdq_pop_eilish"]]
-
-glb <-   gl.read.dart(filename = "../BossFrag/BossFrag/dart_raw/Report-DBoss22-6915/Report_DBoss22-6915_1_moreOrders_SNP_2.csv")
-gl2fasta(gl,outfile = "LantCama_eilish_iqtree.fasta", outpath = "LantCama/popgen",method =1,verbose = NULL)
 
 ##### SPLITSTREE ####
 

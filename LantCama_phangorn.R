@@ -2,7 +2,7 @@ library(phangorn)
 library(ape)
 
 # genotype_matrix <- dms$gt
-genotype_matrix <- read.nexus.data('/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen/raw_SNPFilt_1SNPperClone/svdq/LantCama_DLan23-8067_eilish.nex')
+genotype_matrix <- read.nexus.data('/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen/raw_SNPFilt_1SNPperClone/svdq/LantCama_DLan23-8067_eilish_iqtree.nex')
 x <- nexus2DNAbin(genotype_matrix)
 x2 <- as.phyDat(x)
 

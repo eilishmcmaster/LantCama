@@ -4,7 +4,7 @@ library(ggplot2)
 # svdq <- treeio::read.svdq('/Users/eilishmcmaster/Documents/LantCama/svdq/lantana_eilish_mrbayes_full/infile.nex.con.tre')
 # svdq@data[["prob"]] <- round(as.numeric(svdq@data[["prob"]]), 2)
 
-svdq <- read.tree('/Users/eilishmcmaster/Documents/LantCama/svdquartets/20240517_LantCama_DLan23-8067_80miss_2maf_boot2.tre')
+svdq <- read.tree('/Users/eilishmcmaster/Documents/LantCama/svdquartets/20240605_LantCama_DLan23-8067_80miss_2maf_boot2.tre')
 svdq$node.label <- as.numeric(svdq$node.label)
 ggtree_obj <- ggtree(svdq)
 m2 <- read.xlsx('/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/LantCama_DLan23-8067_meta.xlsx')
@@ -19,27 +19,20 @@ ggtree_obj <- ggtree(svdq, size=0.3) %<+% x1
 # ggtree_obj <- ggtree_obj%>% scaleClade(545, .2) %>%
 #   collapse(545,"max")
 
-hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop','national2')]),
+hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop','morphid2','national2')]),
                 offset=0.025, width=.05, font.size=0,
                 colnames_angle=90, colnames_position="top",
                 custom_column_labels=c("SVDq cluster","Country"), hjust=0) +
-  scale_fill_manual(values=c(cc,cc2), na.value = "grey90") +
+  scale_fill_manual(values=c(svdq_pop_colours,nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
-  # geom_rootedge(0.0005, size=0.01) +
-  geom_tiplab(aes(label = label), size=0.8, align=FALSE, linetype='dotted', linesize=0.2) +
-  # geom_label2(data=svdq, aes(label=prob),
-  #             color='red', nudge_x = 0.00015, label.size=0, fill="transparent", size=1) +
-  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm")) +
-  # scale_y_continuous(expand=c(0.05, 0))+
-  # geom_text2(data=svdq, aes(label=node), size=0.5, color="red")+
-  geom_nodepoint(data=svdq, aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
-# geom_hilight(node=600, fill="steelblue", alpha=0.5) +
-# geom_hilight(node=624, fill="darkgreen", alpha=0.5) +
-# geom_hilight(node=716, fill="gray", alpha=0.5) +
-# geom_hilight(node=734, fill="pink", alpha=0.5) +
-# geom_hilight(node=729, fill="beige", alpha=0.5) +
-# geom_hilight(node=545, fill="yellow", alpha=0.5) +
-# geom_hilight(node=562, fill="blue", alpha=0.5) 
+  geom_tiplab(aes(label = label), size=0.8,linesize = .2) +
+  # geom_rootedge(0.01, size=0.3)+
+  # geom_label2(data=svdq, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
+  geom_label2(data=svdq, aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
+              color='red', nudge_x = 0.0004, label.size=0, fill="transparent", size=1) +
+  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))
+# geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
+
 
 # Create separate ggplots for each fill scheme
 plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=svdq_pop)) +
