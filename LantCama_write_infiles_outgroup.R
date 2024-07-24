@@ -52,7 +52,9 @@ d3 <- remove.by.list(d2,meta$sample_names[which(!is.na(meta$analyses[,'EA_AM']))
 d4        <- remove.poor.quality.snps(d3, min_repro=0.99, max_missing=0.8)%>% remove.fixed.snps()
 d5        <- sample.one.snp.per.locus.random(d4, seed=12345) 
 d6 <- remove.by.maf(d5, 0.01)
-dms <- remove.by.missingness(d6, 0.8)
+d7 <- remove.by.missingness(d6, 0.8)
+dms <- remove.by.maf(d7, 0.01)
+
 
 samples_to_keep_80 <- dms$sample_names
 length(samples_to_keep_80)
@@ -73,7 +75,13 @@ outgroup_samples[which(outgroup_samples %in% dms$sample_names)]
 dart2svdquartets(dms, RandRbase, species, dataset, add_pop=TRUE, pop=dms$sample_names)
 
 
-install.packages('beastier')
 library(beastier)
 save_nexus_as_fasta('/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen/raw_SNPFilt_1SNPperClone/svdq/LantCama_DLan22-7500.nex',
                     '/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen/raw_SNPFilt_1SNPperClone/svdq/LantCama_DLan22-7500.fasta')
+
+
+df <- dms$gt
+unique_counts <- apply(df,2, function(x) length(unique(x)))
+table(unique_counts)
+View(df[,which(unique_counts==2)])
+
