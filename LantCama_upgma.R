@@ -1,7 +1,11 @@
 library(ggtree)
 library(ggplot2)
 library(ape)
+library(openxlsx)
 library(tidytree)
+library(RColorBrewer)
+
+devtools::source_url("https://github.com/eilishmcmaster/SoS_functions/blob/main/sos_functions.R?raw=TRUE")
 
 
 upgma <- read.tree('/Users/eilishmcmaster/Documents/LantCama/upgma/treeUPGMA.tree')
@@ -26,7 +30,7 @@ morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCE
 
 ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1 
 
-hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('svdq_pop_label','morphid2','national2')]),
+hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('morphid2','national2')]),#'svdq_pop_label',
                 offset=0.0006, width=.05, font.size=0,
                 colnames_angle=90, colnames_position="top",
                 custom_column_labels=c("SVDq cluster","Country"), hjust=0) +

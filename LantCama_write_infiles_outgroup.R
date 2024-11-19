@@ -85,3 +85,6 @@ unique_counts <- apply(df,2, function(x) length(unique(x)))
 table(unique_counts)
 View(df[,which(unique_counts==2)])
 
+x <- get_minor_allele_frequencies(df)
+hist(x, breaks = 100)
+min(x)
