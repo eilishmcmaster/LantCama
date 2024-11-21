@@ -1,3 +1,4 @@
+library(ggsignif) 
 library(ggforce)
 library(RRtools)
 library(ade4)
@@ -246,32 +247,6 @@ all3_pca_plots <- ggarrange(pca_plot1, pca_plot2, pca_plot3, labels=c("A","B","C
                             common.legend = TRUE, ncol=3, legend = "bottom")
 all3_pca_plots
 
-#### stats ####
-
-d4_2      <- remove.poor.quality.snps(d3, min_repro=0.99, max_missing=0.99)%>% remove.fixed.snps()
-d5_2        <- sample.one.snp.per.locus.random(d4_2, seed=12345) 
-
-
-s1 <- faststats(d5_2$gt, genetic_group_variable = d5_2$meta$analyses[,'svdq_pop_label'], site_variable = d5_2$meta$analyses[,'svdq_pop_label'], minimum_n = 2,minimum_loci = 5, maf = 0.05, max_missingness = 0.8)
-
-s2 <- faststats(d5_2$gt, genetic_group_variable = d5_2$meta$analyses[,'svdq_pop_label'], site_variable = d5_2$meta$analyses[,'svdq_pop_label'], minimum_n = 2,minimum_loci = 5, maf = 0.02, max_missingness = 0.8)
-
-s3 <- faststats(dms$gt, genetic_group_variable = rep('lantana camara', length(dms$sample_names)), site_variable = dms$meta$analyses[,'svdq_pop_label'], minimum_n = 2, maf = 0.00, max_missingness = 1)
-
-s4 <- faststats(dms$gt, genetic_group_variable = rep('lantana camara', length(dms$sample_names)), site_variable = dms$meta$analyses[,'svdq_pop_label'], minimum_n = 2, maf = 0.05, max_missingness = 1)
-
-p1 <- ggplot()+
-  geom_point(data=s1, mapping=aes(x=genetic_group, y=as.numeric(Ho)), color='red')+
-  geom_point(data=s2, mapping=aes(x=genetic_group, y=as.numeric(Ho)), color='orange')+
-  theme_few()
-
-p2 <- ggplot()+
-  geom_point(data=s3, mapping=aes(x=site, y=as.numeric(Ho)), color='green')+
-  geom_point(data=s4, mapping=aes(x=site, y=as.numeric(Ho)), color='blue')+
-  theme_few()
-  
-p1+p2
-
 # ###
 # library(dartR)
 # gl_unfiltered <- gl.read.dart(filename = "/Users/eilishmcmaster/Documents/LantCama/LantCama/dart_raw/Report_DLan23-8067_SNP_mapping_2.csv")
@@ -300,39 +275,4 @@ p1+p2
 # sild2 <- as.matrix(sild2)
 # unique(sild2)
 # rowMeans(sild2, na.rm=TRUE)
-
-
-# UMAP ###################################################################
-# UMAP reduces dimensions by retaining relationships between points (sample focussed)
-# UMAP calculations
-library(umap)
-custom.config = umap.defaults
-custom.config$random_state = 330
-
-umer <- umap(dist(dms$gt, method = "euclidean")%>%as.matrix, config=custom.config, n_neighbors = 5, min_dist = 0.2) # run umap
-
-umap_df <- umer$layout %>% as.data.frame() #extract output vectors
-umap_df2 <- merge(umap_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=TRUE) #add metadata
-hull <- umap_df2 %>% group_by(svdq_pop_label) %>% 
-  slice(chull(V1, V2))
-hull <- hull[!hull$svdq_pop_label=='ungrouped',]
-
-
-ggplot(umap_df2, aes(x = V1, y = V2, colour = morphid2)) +
-  geom_shape(data = hull, alpha = 0.5, expand = 0.01, radius = 0.01,
-             aes(fill = svdq_pop_label), color = "transparent") +
-  scale_fill_manual(values = svdq_pop_colours, na.translate = FALSE, na.value = "transparent")+ #, guide = "none") +
-  geom_point() +
-  theme_bw() +
-  scale_colour_manual(values = morphid_colours) +
-  guides(colour = guide_legend(
-    title.position = "top",
-    override.aes = list(fill = NA, linetype = 0)  # Ensures fill and linetype don't appear in the legend
-  )) +
-  theme(
-    legend.key.size = unit(0.5, "lines"),  # Adjust legend key size here
-    legend.title = element_text(size = 10),  # Adjust legend title size (optional)
-    legend.text = element_text(size = 8)    # Adjust legend text size (optional)
-  ) +
-  labs(colour = "Morphotype", fill="Clusters", x="", y="")
 

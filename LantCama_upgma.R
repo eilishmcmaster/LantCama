@@ -33,7 +33,7 @@ ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1
 hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('morphid2','national2')]),#'svdq_pop_label',
                 offset=0.0006, width=.05, font.size=0,
                 colnames_angle=90, colnames_position="top",
-                custom_column_labels=c("SVDq cluster","Country"), hjust=0) +
+                custom_column_labels=c("Clusters","Country"), hjust=0) +
   scale_fill_manual(values=c(svdq_pop_colours,nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size=0.8) +
@@ -51,7 +51,7 @@ custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),
 # Create separate ggplots for each fill scheme
 plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=svdq_pop_label)) +
   geom_tile() +
-  scale_fill_manual(name = "SVDq cluster", values = svdq_pop_colours, na.value = "white") +
+  scale_fill_manual(name = "Clusters", values = svdq_pop_colours, na.value = "white") +
   custom_legend_theme
 
 plot_national2 <- ggplot(m2, aes(x=long,y=lat, fill=national2)) +
@@ -183,6 +183,17 @@ hull <- x %>% group_by(svdq_pop_label) %>%
 hull <- hull[!hull$svdq_pop_label=='ungrouped',]
 
 x_filtered <- x[!is.na(x$national2),]
+# Find the point with the largest V1 for each svdq_pop_label
+label_points <- hull %>%
+  group_by(svdq_pop_label) %>%
+  filter(ifelse(y >= -20, y == (max(y, na.rm = TRUE)), y == min(y, na.rm = TRUE))) %>%
+  mutate(y = ifelse(y >= -20, y + 1.5, y-1)) %>%
+  mutate(x = ifelse(y >= -20, x + 0.75, x+0.75)) %>%
+  ungroup()
+
+# Filter out the "ungrouped" label if needed
+label_points <- label_points %>% filter(svdq_pop_label != 'ungrouped')
+
 
 splitstree_plot_svdq <- ggplot(Nnet, aes(x = x, y = y)) +
   geom_shape(data = hull, alpha = 0.7, expand = 0.01, radius = 0.01,
@@ -194,17 +205,88 @@ splitstree_plot_svdq <- ggplot(Nnet, aes(x = x, y = y)) +
   scale_colour_manual(values = morphid_colours, na.translate = FALSE) +
   theme_void() +
   expand_limits(x = c(min(x_filtered$x) - 0.01 * net_x_axis, max(x_filtered$x) + 0.01 * net_x_axis),
-                y = c(min(x_filtered$y) - 0.01 * net_y_axis, max(x_filtered$y) + 0.01 * net_y_axis)) +
+                y = c(min(x_filtered$y) - 0.02 * net_y_axis, max(x_filtered$y) + 0.02 * net_y_axis)) +
   theme(legend.position = "bottom", legend.key = element_blank()) +
   coord_fixed() +
-  labs(color = "Morphotype", shape = "Origin", fill = "SVDq clusters") +
+  labs(color = "Morphotype", shape = "Origin", fill = "Clusters") +
   guides(colour = guide_legend(title.position = "top", nrow = 2, override.aes = list(fill = NA, linetype = 0)), 
          fill = guide_legend(title.position = "top", nrow = 2, override.aes = list(color = NA)),
-         shape = guide_legend(title.position = "top", nrow = 2))
+         shape = guide_legend(title.position = "top", nrow = 2))+
+  geom_text_repel(
+    data = label_points, aes(x = x, y = y, label = svdq_pop_label),box.padding = 0.25,
+    size = 3,  color = "black", nudge_x = 0.3,# nudge_y=0.0
+  )
+
+splitstree_plot_svdq
+  
 # Save the plot
 ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.pdf",
        splitstree_plot_svdq, width = 20, height = 20, units = "cm", dpi = 600)
 
 ggsave("LantCama/outputs/LantCama_splitstree_svdqpops_80miss_maf2.png",
        splitstree_plot_svdq, width = 20, height = 20, units = "cm", dpi = 600)
+
+
+# UMAP ###################################################################
+# UMAP reduces dimensions by retaining relationships between points (sample focussed)
+# UMAP calculations
+library(umap)
+custom.config = umap.defaults
+custom.config$random_state = 330
+
+umer <- umap(dist(dms$gt, method = "euclidean")%>%as.matrix, config=custom.config, n_neighbors = 5, min_dist = 0.2) # run umap
+
+umap_df <- umer$layout %>% as.data.frame() #extract output vectors
+umap_df2 <- merge(umap_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=TRUE) #add metadata
+hull2 <- umap_df2 %>% group_by(svdq_pop_label) %>% 
+  slice(chull(V1, V2))
+hull2 <- hull2[!hull2$svdq_pop_label=='ungrouped',]
+
+
+# Find the point with the largest V1 for each svdq_pop_label
+label_points2 <- umap_df2 %>%
+  group_by(svdq_pop_label) %>%
+  filter(V1 == max(V1, na.rm = TRUE)) %>%
+  ungroup()
+
+# Filter out the "ungrouped" label if needed
+label_points2 <- label_points2 %>% filter(svdq_pop_label != 'ungrouped')
+
+# Create the plot
+umap_plot <- ggplot(umap_df2, aes(x = V1, y = V2, colour = morphid2)) +
+  geom_shape(data = hull2, alpha = 0.5, expand = 0.01, radius = 0.01,
+             aes(fill = svdq_pop_label), color = "transparent", show.legend=FALSE) +
+  scale_fill_manual(values = svdq_pop_colours, na.translate = FALSE, na.value = "transparent") +
+  geom_point(aes(shape = national2)) +
+  geom_text_repel(
+    data = label_points2, aes(x = V1, y = V2, label = svdq_pop_label),
+    size = 3,  color = "black", nudge_x = 0.3, nudge_y=0.4
+  ) +
+  theme_bw() +
+  scale_colour_manual(values = morphid_colours) +
+  guides(colour = guide_legend(
+    title.position = "top",
+    override.aes = list(fill = NA, linetype = 0)
+  )) +
+  theme(
+    legend.key.size = unit(0.5, "lines"),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8)
+  ) +
+  labs(colour = "Morphotype", fill = "Clusters", x = "", y = "")
+
+# Display the plot
+print(umap_plot)
+
+
+umap_splitstree_plot <- ggarrange(splitstree_plot_svdq, umap_plot, common.legend=TRUE, legend="bottom", labels="AUTO", widths=c(1,0.8))
+
+umap_splitstree_plot
+
+# Save the plot
+ggsave("LantCama/outputs/LantCama_splitstree_umap_splitstree_80miss_maf2.pdf",
+       umap_splitstree_plot, width = 24, height = 12, units = "cm", dpi = 600)
+
+ggsave("LantCama/outputs/LantCama_splitstree_umap_splitstree_80miss_maf2.png",
+       umap_splitstree_plot, width = 24, height = 12, units = "cm", dpi = 600)
 
