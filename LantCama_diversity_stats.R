@@ -13,6 +13,7 @@ library(geosphere)
 library(ggfortify)
 library(ggmap)
 library(ggrepel)
+library(fastDiversity)
 library(ggpubr)
 library(ggthemes)
 library(ggtree)
@@ -53,6 +54,13 @@ dms <- remove.by.list(d5, samples_to_keep_80)
 
 d6 <- remove.by.maf(d5, 0.02)
 dms_maf2 <- remove.by.missingness(d6, 0.8)
+
+m2 <- d3$meta$analyses %>% as.data.frame
+
+svdq_pop_colours <- named_list_maker(m2$svdq_pop, 'Spectral', 11)
+svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
+morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
+
 
 ##### modified function, more dps 
 
@@ -287,14 +295,14 @@ ggsave("LantCama/outputs/LantCama_individual_ho_plots.png",
 # remove sites where n=4
 sppop_freq <- as.data.frame(table(dms$meta$site))
 not_n1_sites <- as.vector(sppop_freq[sppop_freq$Freq<5,1]) #remove groups where n<=1
-not_n1_samples <- dms$sample_names[which(!(dms$meta$site %in% not_n1_sites))]
+not_n1_samples <- dms$sample_names[which(!(dms$meta$site %in% not_n1_sites)& !is.na(dms$meta$site))]
 fst_dms <- remove.by.list(dms, not_n1_samples)
 
 length(fst_dms$sample_names)
 length(fst_dms$locus_names)
 
 gds_file <- dart2gds(fst_dms, RandRbase, species, dataset)
-pFst      <- population.pw.Fst(fst_dms, fst_dms$meta$site, RandRbase,species,dataset, maf_val=0.05, miss_val=0.3) #calculates genetic distance
+pFst      <- population.pw.Fst(fst_dms, fst_dms$meta$site, RandRbase,species,dataset, maf_val=0.02, miss_val=0.8) #calculates genetic distance
 pS        <- population.pw.spatial.dist(fst_dms, fst_dms$meta$site) #calculates geographic distance between populations
 
 ####plot IBD plot
@@ -317,19 +325,19 @@ colnames(Fst_sig)[4] <- "Fst"
 Fst_sig$Geo_dist2 <-Fst_sig$Geo_dist/1000 
 
 # adding metadata for sites
-Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site","sp")]), by.x="Var1", by.y="site", all.y=FALSE)
-Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site","sp")]), by.x="Var2", by.y="site", all.y=FALSE)
-Fst_sig2$same_sp <- ifelse(Fst_sig2$sp.x == Fst_sig2$sp.y, "Intraspecific", "Interspecific")
+Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site","morphid2")]), by.x="Var1", by.y="site", all.y=FALSE)
+Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site","morphid2")]), by.x="Var2", by.y="site", all.y=FALSE)
+Fst_sig2$same_morphid2 <- ifelse(Fst_sig2$morphid2.x == Fst_sig2$morphid2.y, "Intra-morph", "Inter-morph")
 
 library(ggforce)
-fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_sp))+geom_point(size=1, alpha=0.3)+
+fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_morphid2))+geom_point(size=1, alpha=0.3)+
   labs(x="Distance (km)", y="FST", colour="Comparison")+
   facet_zoom(x=Geo_dist2<25, zoom.size=1)+theme_bw()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
 fstp1
 
-ggsave("BossFrag/outputs/paper/supfig2_BossFrag_manning_fst.pdf",
-       fstp1, width = 15, height = 15, units = "cm", dpi=600)
+# ggsave("BossFrag/outputs/paper/supfig2_BossFrag_manning_fst.pdf",
+#        fstp1, width = 15, height = 15, units = "cm", dpi=600)
 
 paste("Mantel statistic r is", round(man$statistic, 3), ", P =", man$signif)
 
@@ -350,22 +358,22 @@ od <- colnames(mat2)[column_order(order_hm)]
 mat = mat[od, od]
 mat2 = mat2[od, od]
 
-agg <- unique(m2[, c("site", "sp")]) # create aggregated df of pop_largeecies and site
+agg <- unique(m2[, c("site", "morphid2")]) # create aggregated df of pop_largeecies and site
 mat2 <- merge(mat2, agg, by.x=0, by.y="site", all.y=FALSE) #add aggregated df to mat2 (fst)
 rownames(mat2) <- mat2$Row.names
 
 mat2$Row.names <- NULL
 mat2 <- mat2[match(colnames(mat2)[1:nrow(mat2)],rownames(mat2)),]
 
-row_group_ann <- rowAnnotation(Group = mat2$sp,
-                               col=list(Group=species_colours),
+row_group_ann <- rowAnnotation(Group = mat2$morphid2,
+                               col=list(Group=morphid_colours),
                                na_col="white",
                                annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
                                                               title_gp=gpar(fontsize=10)),
                                annotation_name_gp = gpar(fontsize = 0),
                                annotation_name_side="top")
 
-bottom_group_ann <- HeatmapAnnotation(Group = mat2$sp, col = list(Group = species_colours),
+bottom_group_ann <- HeatmapAnnotation(Group = mat2$morphid2, col = list(Group = morphid_colours),
                                       annotation_name_gp = gpar(fontsize = 0),
                                       annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
                                                                      title_gp=gpar(fontsize=10)),
@@ -427,9 +435,9 @@ gene_width <- nrow(mat2)*unit(6, "mm")
 draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
 
 # Set the file name and parameters
-filename <- "BossFrag/outputs/paper/fig4_fst_plot.pdf"
-width <- 16 * 0.393701
-height <- 14 * 0.393701
+filename <- "LantCama/outputs/LantCama_fst_plot.pdf"
+width <- ncol(mat) * 0.28
+height <- ncol(mat) * 0.28
 dpi <- 300
 units <- "cm"
 
