@@ -60,6 +60,7 @@ m2 <- d3$meta$analyses %>% as.data.frame
 svdq_pop_colours <- named_list_maker(m2$svdq_pop, 'Spectral', 11)
 svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
 morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
+nation_colours <- named_list_maker(m2$national2, 'Paired',11)
 
 
 ##### modified function, more dps 
@@ -332,9 +333,27 @@ Fst_sig2$same_morphid2 <- ifelse(Fst_sig2$morphid2.x == Fst_sig2$morphid2.y, "In
 library(ggforce)
 fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_morphid2))+geom_point(size=1, alpha=0.3)+
   labs(x="Distance (km)", y="FST", colour="Comparison")+
-  facet_zoom(x=Geo_dist2<25, zoom.size=1)+theme_bw()+
+  # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
+  theme_bw()+
+  geom_hline(yintercept = 0.3, linetype="dotted")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
 fstp1
+
+# 
+# 
+# # adding metadata for sites
+# Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site","svdq_pop_label")]), by.x="Var1", by.y="site", all.y=FALSE)
+# Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site","svdq_pop_label")]), by.x="Var2", by.y="site", all.y=FALSE)
+# Fst_sig2$same_svdq_pop_label <- ifelse(Fst_sig2$svdq_pop_label.x == Fst_sig2$svdq_pop_label.y, "Intra-morph", "Inter-morph")
+# 
+# library(ggforce)
+# fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_svdq_pop_label))+geom_point(size=1, alpha=0.3)+
+#   labs(x="Distance (km)", y="FST", colour="Comparison")+
+#   geom_hline(yintercept = 0.3, linetype="dotted")+
+#   # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
+#   theme_bw()+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
+# fstp1
 
 # ggsave("BossFrag/outputs/paper/supfig2_BossFrag_manning_fst.pdf",
 #        fstp1, width = 15, height = 15, units = "cm", dpi=600)
@@ -358,22 +377,51 @@ od <- colnames(mat2)[column_order(order_hm)]
 mat = mat[od, od]
 mat2 = mat2[od, od]
 
-agg <- unique(m2[, c("site", "morphid2")]) # create aggregated df of pop_largeecies and site
+# order_hm <- Heatmap(mat,
+#                     cluster_rows = TRUE,
+#                     cluster_columns = TRUE)
+# od <- colnames(mat)[column_order(order_hm)]
+# 
+# mat = mat[od, od]
+# mat2 = mat2[od, od]
+
+agg <- unique(m2[, c("site", "morphid2",'national2')]) # create aggregated df of pop_largeecies and site
 mat2 <- merge(mat2, agg, by.x=0, by.y="site", all.y=FALSE) #add aggregated df to mat2 (fst)
 rownames(mat2) <- mat2$Row.names
 
 mat2$Row.names <- NULL
 mat2 <- mat2[match(colnames(mat2)[1:nrow(mat2)],rownames(mat2)),]
 
-row_group_ann <- rowAnnotation(Group = mat2$morphid2,
-                               col=list(Group=morphid_colours),
+row_group_ann <- rowAnnotation(Morphotype = mat2$morphid2,
+                               col=list(Morphotype=morphid_colours),
                                na_col="white",
                                annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
                                                               title_gp=gpar(fontsize=10)),
                                annotation_name_gp = gpar(fontsize = 0),
                                annotation_name_side="top")
 
-bottom_group_ann <- HeatmapAnnotation(Group = mat2$morphid2, col = list(Group = morphid_colours),
+
+
+bottom_group_ann <- HeatmapAnnotation(Morphotype = mat2$morphid2, col = list(Morphotype = morphid_colours),
+                                      annotation_name_gp = gpar(fontsize = 0),
+                                      annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
+                                                                     title_gp=gpar(fontsize=10)),
+                                      annotation_name_side="left",
+                                      na_col = "white")
+
+
+
+row_group_ann2 <- rowAnnotation(Country = mat2$national2,
+                               col=list(Country=nation_colours),
+                               na_col="white",
+                               annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
+                                                              title_gp=gpar(fontsize=10)),
+                               annotation_name_gp = gpar(fontsize = 0),
+                               annotation_name_side="top")
+
+
+
+bottom_group_ann2 <- HeatmapAnnotation(Country = mat2$national2, col = list(Country = nation_colours),
                                       annotation_name_gp = gpar(fontsize = 0),
                                       annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
                                                                      title_gp=gpar(fontsize=10)),
@@ -391,7 +439,7 @@ geo <- Heatmap(mat,rect_gp = gpar(type = "none"),
                width = nrow(mat)*unit(6, "mm"),
                height = nrow(mat)*unit(6, "mm"),
                col=palette,na_col="white",
-               bottom_annotation = bottom_group_ann,
+               bottom_annotation = c(bottom_group_ann),
                row_names_gp = gpar(fontsize = 8, fontface="italic"),
                column_names_gp = gpar(fontsize = 8),
                cluster_rows = FALSE,
@@ -432,7 +480,7 @@ gene <- Heatmap(as.matrix(mat2[,1:nrow(mat2)]), rect_gp = gpar(type = "none"),
 
 gene_width <- nrow(mat2)*unit(6, "mm")
 
-draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
+# draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
 
 # Set the file name and parameters
 filename <- "LantCama/outputs/LantCama_fst_plot.pdf"
@@ -449,3 +497,59 @@ draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
 
 # Turn off the PNG device
 dev.off()
+
+
+####
+
+
+#### pca ####
+
+gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
+gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
+
+g_pca_df <- gen_pca[["scores"]] #extract PCs
+g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # some in DArT are not in meta?
+
+pcnames <- paste0(colnames(g_pca_df)," (",
+                  paste(round(gen_pca[["eig"]][1:6]/sum(gen_pca[["eig"]]) *100, 2)),
+                  "%)") #create names for axes
+
+pca_plot1 <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=morphid2))+ xlab(pcnames[1])+ylab(pcnames[2])+
+  geom_point(size=2)+
+  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+  labs(colour="", shape="")+
+  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+        legend.text = element_text(face="italic"),
+        axis.title = element_text(size=10), axis.text = element_text(size=8))+
+  guides(colour = guide_legend(title.position = "top"))+#+
+  scale_colour_manual(values=morphid_colours)
+# scale_shape_manual(values=cluster2ecies_shapes)
+pca_plot1
+
+pca_plot2 <- ggplot(g_pca_df2, aes(x=PC3, y=PC4, colour=morphid2, shape=national2))+ xlab(pcnames[3])+ylab(pcnames[4])+
+  geom_point(size=2)+
+  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+  labs(colour="", shape="")+
+  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+        legend.text = element_text(face="italic"),
+        axis.title = element_text(size=10), axis.text = element_text(size=8))+
+  guides(colour = guide_legend(title.position = "top"))+
+  scale_colour_manual(values=morphid_colours)
+# scale_colour_manual(values=cluster2ecies_colours)+
+# scale_shape_manual(values=cluster2ecies_shapes)
+
+pca_plot3 <- ggplot(g_pca_df2, aes(x=PC5, y=PC6, colour=morphid2, shape=national2))+ xlab(pcnames[5])+ylab(pcnames[6])+
+  geom_point(size=2)+
+  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+  labs(colour="", shape="")+
+  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+        legend.text = element_text(face="italic"),
+        axis.title = element_text(size=10), axis.text = element_text(size=8))+
+  guides(colour = guide_legend(title.position = "top"))+
+  scale_colour_manual(values=morphid_colours)
+# scale_colour_manual(values=cluster2ecies_colours)+
+# scale_shape_manual(values=cluster2ecies_shapes)
+
+all3_pca_plots <- ggarrange(pca_plot1, pca_plot2, pca_plot3, labels=c("A","B","C"),
+                            common.legend = TRUE, ncol=3, legend = "bottom")
+all3_pca_plots
