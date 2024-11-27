@@ -137,7 +137,15 @@ print(db_result)
 db_df <- data.frame(sample=names(d),db_cluster=db_result$cluster)
 db_df$db_cluster[which(db_df$db_cluster==0)] <- NA
 
+
+
+
 g_pca_df3 <- merge(g_pca_df2,db_df, by.x='Row.names',by.y='sample')
+
+
+hull <- g_pca_df3 %>% group_by(db_cluster) %>% 
+  slice(chull(PC1, PC2))
+hull <- hull[hull$db_cluster!=0,]
 
 pca_plot1 <- ggplot(g_pca_df3, aes(x=PC1, y=PC2, colour=factor(db_cluster)))+ xlab(pcnames[1])+ylab(pcnames[2])+
   geom_point(size=2)+
@@ -146,11 +154,14 @@ pca_plot1 <- ggplot(g_pca_df3, aes(x=PC1, y=PC2, colour=factor(db_cluster)))+ xl
   theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
         legend.text = element_text(face="italic"),
         axis.title = element_text(size=10), axis.text = element_text(size=8))+
-  guides(colour = guide_legend(title.position = "top"))
+  guides(colour = guide_legend(title.position = "top"))+
+  geom_shape(data = hull, alpha = 0.5, expand = 0.01, radius = 0.01,
+             aes(group = db_cluster), color = "transparent", show.legend=FALSE)
   # scale_colour_manual(values=morphid_colours)
 pca_plot1
 
-
+ggplot(g_pca_df3, aes(x=PC5, y=PC6, colour=factor(db_cluster)))+ xlab(pcnames[3])+ylab(pcnames[4])+
+  geom_point(size=2)
 
 # 
 # set.seed(123)  # For reproducibility
@@ -221,3 +232,44 @@ umap_plot <- ggplot(umap_df2, aes(x = V1, y = V2, colour = morphid2)) +
 # Display the plot
 print(umap_plot)
 
+####
+
+library(ComplexHeatmap)
+library(circlize)
+
+# Create a color mapping for clusters
+cluster_colors <- structure(
+  c(rainbow(max(db_result$cluster, na.rm = TRUE))), # Gray for noise
+  names = c(seq_len(max(db_result$cluster, na.rm = TRUE)))
+)
+
+# Create row and column annotations
+row_anno <- rowAnnotation(
+  db_cluster = as.factor(db_df$db_cluster),
+  col = list(db_cluster = cluster_colors),
+  annotation_legend_param = list(
+    db_cluster = list(title = "DBSCAN Cluster")
+  )
+)
+
+col_anno <- HeatmapAnnotation(
+  db_cluster = as.factor(db_df$db_cluster),
+  col = list(db_cluster = cluster_colors),
+  annotation_legend_param = list(
+    db_cluster = list(title = "DBSCAN Cluster")
+  ),
+  which = "column"
+)
+
+# Create the heatmap
+Heatmap(
+  d_matrix,
+  name = "Distance",
+  # cluster_rows = FALSE, # Disable clustering since we are using dbscan
+  # cluster_columns = FALSE,
+  # show_row_dend = FALSE,
+  # show_column_dend = FALSE,
+  top_annotation = col_anno,
+  right_annotation = row_anno,
+  col = colorRamp2(c(min(d_matrix), max(d_matrix)), c("white", "blue"))
+)
