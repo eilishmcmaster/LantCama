@@ -104,20 +104,17 @@ all3_pca_plots
 
 ####
 library(dbscan)
+
+eps <- 14
+min_pts <- 10
+
 genotype_matrix <- dms$gt %>% as.matrix()
 d <- dist(genotype_matrix, method = "euclidean")
-# hc <- hclust(d, method = "ward.D2")
-# hc_upgma <- hclust(d, method = "average")
-# plot(hc)  # Visualize dendrogram
-# plot(hc_upgma)
 
-# Ensure `d` is a distance object
 d_matrix <- as.matrix(d)  # Convert dist object to matrix
 
 # Extract the upper triangle
 upper_triangle <- d_matrix[upper.tri(d_matrix)]
-
-eps <- 10
 
 # Plot the histogram
 hist(upper_triangle, 
@@ -128,111 +125,20 @@ hist(upper_triangle,
      border = "white")
 abline(v = eps, col = "red", lty = 2, lwd = 2)  # lty = 2 for dotted line, lwd = 2 for thickness
 
-
-kNNdistplot(d, k = 5) # k = min pts
+kNNdistplot(d, k = min_pts) # k = min pts
 abline(h = eps, col = "red", lty = 2)  # Adjust h to where the elbow appears
-db_result <- dbscan(d, eps = eps, minPts = 5)
-print(db_result)
 
-db_df <- data.frame(sample=names(d),db_cluster=db_result$cluster)
+# Use DBSCAN to cluster with a strict distance constraint
+# db_result <- dbscan(d, eps = eps, minPts = min_pts)  
+db_result <- hdbscan(d, minPts = min_pts)  
+
+print(db_result$cluster)
+clusters <- db_result$cluster
+
+db_df <- data.frame(sample=names(d),db_cluster=clusters)
 db_df$db_cluster[which(db_df$db_cluster==0)] <- NA
 
-
-
-
-g_pca_df3 <- merge(g_pca_df2,db_df, by.x='Row.names',by.y='sample')
-
-
-hull <- g_pca_df3 %>% group_by(db_cluster) %>% 
-  slice(chull(PC1, PC2))
-hull <- hull[hull$db_cluster!=0,]
-
-pca_plot1 <- ggplot(g_pca_df3, aes(x=PC1, y=PC2, colour=factor(db_cluster)))+ xlab(pcnames[1])+ylab(pcnames[2])+
-  geom_point(size=2)+
-  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  labs(colour="", shape="")+
-  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
-        legend.text = element_text(face="italic"),
-        axis.title = element_text(size=10), axis.text = element_text(size=8))+
-  guides(colour = guide_legend(title.position = "top"))+
-  geom_shape(data = hull, alpha = 0.5, expand = 0.01, radius = 0.01,
-             aes(group = db_cluster), color = "transparent", show.legend=FALSE)
-  # scale_colour_manual(values=morphid_colours)
-pca_plot1
-
-ggplot(g_pca_df3, aes(x=PC5, y=PC6, colour=factor(db_cluster)))+ xlab(pcnames[3])+ylab(pcnames[4])+
-  geom_point(size=2)
-
-# 
-# set.seed(123)  # For reproducibility
-# kmeans_result <- kmeans(d, centers = 3)
-# clusters <- kmeans_result$cluster
-# pam_result <- pam(d, k = 3)  # Choose the number of clusters
-# clusters <- pam_result$clustering
-# heatmap(d, Rowv = as.dendrogram(hc), symm = TRUE)
-# 
-# pca <- prcomp(genotype_matrix, scale. = TRUE)
-# plot(pca$x[, 1:2], col = clusters, pch = 16, main = "PCA Clustering")
-# 
-# sil <- silhouette(clusters, dist = d)
-# plot(sil)
-
-# UMAP ###################################################################
-# UMAP reduces dimensions by retaining relationships between points (sample focussed)
-# UMAP calculations
-library(umap)
-custom.config = umap.defaults
-custom.config$random_state = 330
-
-umer <- umap(d %>% as.matrix(), config=custom.config, n_neighbors = 5, min_dist = 0.05) # run umap
-
-umap_df <- umer$layout %>% as.data.frame() #extract output vectors
-umap_df2 <- merge(umap_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=TRUE) #add metadata
-umap_df2 <- merge(umap_df2, db_df, by.x='Row.names',by.y='sample')
-
-# hull2 <- umap_df2 %>% group_by(svdq_pop_label) %>% 
-#   slice(chull(V1, V2))
-# hull2 <- hull2[!hull2$svdq_pop_label=='ungrouped',]
-hull2 <- umap_df2 %>% group_by(db_cluster) %>% 
-  slice(chull(V1, V2))
-hull2 <- hull2[hull2$db_cluster!=0,]
-# 
-# # Find the point with the largest V1 for each svdq_pop_label
-# label_points2 <- umap_df2 %>%
-#   group_by(svdq_pop_label) %>%
-#   filter(V1 == max(V1, na.rm = TRUE)) %>%
-#   ungroup()
-# 
-# # Filter out the "ungrouped" label if needed
-# label_points2 <- label_points2 %>% filter(svdq_pop_label != 'ungrouped')
-
-# Create the plot
-umap_plot <- ggplot(umap_df2, aes(x = V1, y = V2, colour = morphid2)) +
-  geom_shape(data = hull2, alpha = 0.5, expand = 0.01, radius = 0.01,
-             aes(group = db_cluster), color = "transparent", show.legend=FALSE) +
-  # scale_fill_manual(values = svdq_pop_colours, na.translate = FALSE, na.value = "transparent") +
-  geom_point() +
-  # geom_text_repel(
-  #   data = label_points2, aes(x = V1, y = V2, label = svdq_pop_label),
-  #   size = 3,  color = "black", nudge_x = 0.3, nudge_y=0.4
-  # ) +
-  theme_bw() +
-  scale_colour_manual(values = morphid_colours) +
-  guides(colour = guide_legend(
-    title.position = "top",
-    override.aes = list(fill = NA, linetype = 0)
-  )) +
-  theme(
-    legend.key.size = unit(0.5, "lines"),
-    legend.title = element_text(size = 10),
-    legend.text = element_text(size = 8)
-  ) +
-  labs(colour = "Morphotype", fill = "Clusters", x = "", y = "")
-
-# Display the plot
-print(umap_plot)
-
-####
+##
 
 library(ComplexHeatmap)
 library(circlize)
@@ -262,14 +168,113 @@ col_anno <- HeatmapAnnotation(
 )
 
 # Create the heatmap
-Heatmap(
+ht <- Heatmap(
   d_matrix,
   name = "Distance",
   # cluster_rows = FALSE, # Disable clustering since we are using dbscan
   # cluster_columns = FALSE,
   # show_row_dend = FALSE,
   # show_column_dend = FALSE,
+  clustering_method_columns = "average",
+  clustering_method_rows = "average",
   top_annotation = col_anno,
   right_annotation = row_anno,
+  
   col = colorRamp2(c(min(d_matrix), max(d_matrix)), c("white", "blue"))
 )
+draw(ht, merge_legends = TRUE)
+
+###
+
+library(Rtsne)
+
+library(dbscan)
+library(Rtsne)  # For t-SNE
+library(ggplot2)  # For plotting
+
+# Existing code to compute the distance matrix
+genotype_matrix <- dms$gt %>% as.matrix()
+d <- dist(genotype_matrix, method = "euclidean")
+d_matrix <- as.matrix(d)
+
+# Perform t-SNE on the distance matrix (or you could use the original genotype matrix)
+tsne_result <- Rtsne(d_matrix, dims = 2, perplexity = 15, 
+                     check_duplicates = FALSE, theta=0,
+                     is_distance=TRUE,
+                     num_threads=4)
+
+# Run HDBSCAN on the t-SNE output (2D coordinates)
+tsne_df <- data.frame(tsne_result$Y)  # Extract the 2D coordinates from t-SNE
+colnames(tsne_df) <- c("tSNE1", "tSNE2")  # Rename columns for clarity
+
+
+
+# Apply HDBSCAN to the t-SNE coordinates (2D space)
+hdbscan_result <- hdbscan(tsne_df, minPts = 10)
+
+# test <- data.frame(cluster=hdbscan_result$cluster, prob=hdbscan_result$membership_prob)
+
+# Add the cluster labels to the t-SNE data
+tsne_df$db_cluster <- hdbscan_result$cluster
+# tsne_df$db_cluster[tsne_df$db_cluster == 0] <- NA  # Assign NA to noise points
+
+# Plot the t-SNE result with HDBSCAN clusters
+ggplot(tsne_df, aes(x = tSNE1, y = tSNE2, color = factor(db_cluster))) +
+  geom_point(alpha=0.5) +
+  scale_color_manual(values = c("gray", rainbow(length(unique(tsne_df$db_cluster))))) +
+  labs(title = "t-SNE with HDBSCAN Clusters",
+       x = "t-SNE 1", y = "t-SNE 2", color = "Cluster") +
+  theme_bw()
+
+
+#
+
+clusters2 <- hdbscan_result$cluster
+
+db_df2 <- data.frame(sample=names(d),db_cluster=clusters2)
+db_df2$db_cluster[which(db_df2$db_cluster==0)] <- NA
+
+##
+
+library(ComplexHeatmap)
+library(circlize)
+
+# Create a color mapping for clusters
+cluster_colors <- structure(
+  c(rainbow(max(clusters2, na.rm = TRUE))), # Gray for noise
+  names = c(seq_len(max(clusters2, na.rm = TRUE)))
+)
+
+# Create row and column annotations
+row_anno <- rowAnnotation(
+  db_cluster = as.factor(db_df2$db_cluster),
+  col = list(db_cluster = cluster_colors),
+  annotation_legend_param = list(
+    db_cluster = list(title = "DBSCAN Cluster")
+  ),
+  annotation_name_gp = gpar(fontsize = 0)
+)
+
+col_anno <- HeatmapAnnotation(
+  db_cluster = as.factor(db_df2$db_cluster),
+  col = list(db_cluster = cluster_colors),
+  annotation_legend_param = list(
+    db_cluster = list(title = "DBSCAN Cluster")
+  ),
+  which = "column"
+)
+
+# Create the heatmap
+ht <- Heatmap(
+  d_matrix,
+  name = "Distance",
+  clustering_method_columns = "average",
+  clustering_method_rows = "average",
+  top_annotation = col_anno,
+  right_annotation = row_anno,
+  show_column_names = FALSE,  # Remove column names
+  show_row_names = FALSE,   
+  col = colorRamp2(c(min(d_matrix), max(d_matrix)), c("white", "blue"))
+)
+draw(ht, merge_legends = TRUE)
+
