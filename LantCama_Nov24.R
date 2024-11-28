@@ -128,10 +128,39 @@ colnames(tsne_df) <- c("tSNE1", "tSNE2")  # Rename columns for clarity
 
 # Apply HDBSCAN to the t-SNE coordinates (2D space)
 hdbscan_result <- hdbscan(tsne_df, minPts = 5)
+######
+hdb_scan_qc <- data.frame(cluster=hdbscan_result$cluster, prob=hdbscan_result$membership_prob,
+                          cd = hdbscan_result$coredist, os = hdbscan_result$outlier_scores)
+hdb_scan_qc_summary_stats <- hdb_scan_qc %>%
+  # filter(cluster != 0) %>%  # Exclude cluster 0
+  group_by(cluster) %>%
+  summarise(
+    mean_os = mean(os, na.rm = TRUE),  # Compute mean of outlier scores, ignoring NA values
+    sd_os = sd(os, na.rm = TRUE)       # Compute standard deviation of outlier scores
+  ) %>%
+  mutate( # Z-score indicates how many standard deviations an element is from the mean. 
+    z_score = (mean_os - mean(mean_os)) / sd(mean_os)
+  )
 
+ggplot()+
+  geom_histogram(data=hdb_scan_qc, mapping=aes(x=cd))+
+  facet_wrap(~cluster)
 
+ggplot()+
+  geom_histogram(data=hdb_scan_qc, mapping=aes(x=os))+
+  facet_wrap(~cluster)+
+  geom_vline(data = hdb_scan_qc_summary_stats, aes(xintercept = mean_os+1.5*(sd_os)), linetype = "dashed", color = "red")
 
-min_cluster_size <- 15
+hdb_scan_qc_summary_stats
+
+unusually_high_clusters <- hdb_scan_qc_summary_stats %>%
+  filter(z_score > 1.5)
+
+hdbscan_result$cluster[which(hdbscan_result$cluster %in% unusually_high_clusters$cluster)] <- 0 # remove unusual 
+
+#####
+
+min_cluster_size <- 10
 hdb_df2 <- data.frame(sample=names(d),hdb_cluster=hdbscan_result$cluster)
 
 small_clusters <- names(which(table(hdb_df2$hdb_cluster) < min_cluster_size))
@@ -174,6 +203,8 @@ tsne_plot2 <- ggplot(hdb_df2, aes(x = tSNE1, y = tSNE2, color = morphid2)) +
   geom_point(size=0.5) +
   scale_color_manual(values = morphid_colours) +
   labs( x = "t-SNE 1", y = "t-SNE 2", color = "Morphotype")
+
+tsne_plot1
 
 ggarrange(pca_plot1, tsne_plot2, tsne_plot1, nrow=3, align="hv")
 
@@ -245,8 +276,7 @@ ht <- Heatmap(
   show_row_names = FALSE,   
   col = colorRamp2(c(min(d_matrix), max(d_matrix)), c("white", "black")),
   row_dend_width = unit(3, "cm"),          # Adjust row dendrogram size
-  column_dend_height = unit(3, "cm"),
-  row_dend_gp = gpar(linewidth=0.0001)
+  column_dend_height = unit(3, "cm")
 )
 
 draw(ht, merge_legends = TRUE)
@@ -272,3 +302,50 @@ combined_plots %<>%
   fill_panel(draw(ht, merge_legends = TRUE), column = 2, row = 1:3, label = "D")
 
 ggsave('LantCama/outputs/Figure1_combined_plots.pdf', combined_plots, width = 34, height = 24, units = "cm")
+
+
+##### LEA ####
+
+library(LEA)
+
+nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+kvalrange <- 1:15
+# 
+# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 10, project = "new", CPU=8)
+# 
+# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+
+load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+
+plot(snmf1, col = "blue", pch = 19, cex = 1.2)
+best = which.min(cross.entropy(snmf1, K = K_chosen))
+my.colors <- c("tomato", "lightblue",
+               "olivedrab", "gold",'blue')
+
+K_chosen <- 12
+
+barchart(snmf1, K = K_chosen, run = best,
+         border = NA, space = 0,
+         col = my.colors,
+         xlab = "Individuals",
+         ylab = "Ancestry proportions",
+         main = "Ancestry matrix") -> bp
+
+axis(1, at = 1:length(bp$order),
+     labels = bp$order, las=1,
+     cex.axis = .4)
+
+qmatrix_df <- as_tibble(Q(snmf1, K = K_chosen, run=which.min(cross.entropy(snmf1, K = K_chosen)))) %>%
+  mutate(sample = dms$sample_names) %>%
+  pivot_longer(-sample, names_to = "lea_cluster", values_to = "proportion")
+
+qmatrix_df2 <- merge(qmatrix_df, hdb_df2, by='sample')
+
+ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = lea_cluster)) +
+  geom_bar(stat = "identity", width = 1) +
+  facet_grid(~cluster, scales = "free_x", space="free_x")+
+  theme_few() +
+  scale_fill_brewer(palette = "Set3") + # Use a more subtle color palette
+  theme(axis.text.x = element_blank())+
+  scale_y_continuous(limits = c(0,1.001), expand=c(0,0))+
+  labs(x = "Individuals", y = "Ancestry Proportion", fill = "Cluster")
