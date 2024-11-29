@@ -41,9 +41,11 @@ basedir <- ""
 d1        <- new.read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetavar, euchits=FALSE)
 meta      <- read.meta.data.full.analyses.df(d1, basedir, species, dataset)
 d3        <- dart.meta.data.merge(d1, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_only']))])
-d4        <- remove.poor.quality.snps(d3, min_repro=0.99, max_missing=0.8)%>% remove.fixed.snps()
+d4        <- remove.poor.quality.snps(d3, min_repro=0.96, max_missing=0.6)%>% remove.fixed.snps()
 d5        <- sample.one.snp.per.locus.random(d4, seed=12345) 
-dms <- remove.by.missingness(d5, 0.8)
+length(d5$locus_names)
+dms <- remove.by.missingness(d5, 0.6)
+length(dms$sample_names)
 
 m2 <- dms$meta$analyses %>% as.data.frame
 m2$lat <- as.numeric(m2$lat)
@@ -55,7 +57,8 @@ svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
 
 # 
 # # #### pca ####
-# dms_maf2 <- remove.by.maf(dms, 0.02)
+dms_maf2 <- remove.by.maf(dms, 0.02)
+length(dms_maf2$locus_names)
 # 
 # gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
 # gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
@@ -132,7 +135,7 @@ hdbscan_clusters <- hdbscan_result$cluster
 
 # Step 2: Run hierarchical clustering
 hc_result <- hclust(d, method = "average")
-hc_clusters <- cutree(hc_result, k = length(hdbscan_clusters))  # Adjust 'k' as needed
+hc_clusters <- cutree(hc_result, h=10)  # Adjust 'k' as needed
 
 # Step 3: Create a data frame that contains both cluster assignments
 cluster_comparison <- data.frame(
@@ -172,7 +175,7 @@ keep_rows <- which(max_prop_row>=0.9)
 if(length(keep_rows)==1){
   hc <- names(which(z5<0.1 & z5>0))
   hdb <- names(keep_rows)
-  samples_to_remove2 <- rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster==hc]
+  samples_to_remove2 <- rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster %in% hc]
 }
 
 if(length(keep_rows)>1){
