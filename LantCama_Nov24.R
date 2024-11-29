@@ -41,10 +41,10 @@ basedir <- ""
 d1        <- new.read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetavar, euchits=FALSE)
 meta      <- read.meta.data.full.analyses.df(d1, basedir, species, dataset)
 d3        <- dart.meta.data.merge(d1, meta) %>% remove.by.list(.,meta$sample_names[which(!is.na(meta$analyses[,'EA_only']))])
-d4        <- remove.poor.quality.snps(d3, min_repro=0.96, max_missing=0.6)%>% remove.fixed.snps()
+d4        <- remove.poor.quality.snps(d3, min_repro=0.98, max_missing=0.8)%>% remove.fixed.snps()
 d5        <- sample.one.snp.per.locus.random(d4, seed=12345) 
 length(d5$locus_names)
-dms <- remove.by.missingness(d5, 0.6)
+dms <- remove.by.missingness(d5, 0.8)
 length(dms$sample_names)
 
 m2 <- dms$meta$analyses %>% as.data.frame
@@ -131,67 +131,68 @@ colnames(tsne_df) <- c("tSNE1", "tSNE2")  # Rename columns for clarity
 
 # Apply HDBSCAN to the t-SNE coordinates (2D space)
 hdbscan_result <- hdbscan(tsne_df, minPts = 5)
+
 hdbscan_clusters <- hdbscan_result$cluster
-
-# Step 2: Run hierarchical clustering
-hc_result <- hclust(d, method = "average")
-hc_clusters <- cutree(hc_result, h=10)  # Adjust 'k' as needed
-
-# Step 3: Create a data frame that contains both cluster assignments
-cluster_comparison <- data.frame(
-  id = 1:nrow(tsne_df),
-  hdbscan_cluster = hdbscan_clusters,
-  hc_cluster = hc_clusters
-)
-
-# Step 4: Join and compare clusters to find monophyletic clusters
-# Group by HDBSCAN cluster and check if all points in the same HDBSCAN cluster are in a single hierarchical cluster
-monophyletic_clusters <- cluster_comparison %>%
-  group_by(hdbscan_cluster) %>%
-  summarize(
-    unique_hc_clusters = n_distinct(hc_cluster),
-    .groups = 'drop'
-  ) %>%
-  filter(unique_hc_clusters == 1)  # Monophyletic if only one hierarchical cluster appears
-
-# Step 5: Find the non-monophyletic clusters (those with more than one unique hierarchical cluster)
-non_monophyletic_clusters <- cluster_comparison %>%
-  filter(hdbscan_cluster %in% setdiff(unique(hdbscan_clusters), monophyletic_clusters$hdbscan_cluster)) %>%
-  pull(hdbscan_cluster) %>%
-  unique()
-
-z <- cluster_comparison %>%
-  filter(hdbscan_cluster %in% non_monophyletic_clusters)
-
-z2 <- table(z[,c('hdbscan_cluster', 'hc_cluster')])
-
-nm_clusters_remove <- c(names(which(rowSums(z2)<10)),0)
-
-z3 <- z2[!(rownames(z2) %in% nm_clusters_remove),]
-
-z4 <- z3/rowSums(z3) 
-max_prop_row <- apply(z4,1, max)
-keep_rows <- which(max_prop_row>=0.9)
-if(length(keep_rows)==1){
-  hc <- names(which(z5<0.1 & z5>0))
-  hdb <- names(keep_rows)
-  samples_to_remove2 <- rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster %in% hc]
-}
-
-if(length(keep_rows)>1){
-  z5 <- z4[keep_rows,]
-  samples_to_remove <- apply(z5,1, function(x){
-    hc <- names(which(x<0.1 & x>0))
-  })
-  samples_to_remove2 <- c()
-  
-  for(i in 1:length(samples_to_remove)){
-    hdb <- names(samples_to_remove)[i]
-    hc <- (samples_to_remove)[i]
-    samples_to_remove2 <- c(samples_to_remove2, 
-                            unlist(rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster %in% hc]))
-  }
-}
+# 
+# # Step 2: Run hierarchical clustering
+# hc_result <- hclust(d, method = "average")
+# hc_clusters <- cutree(hc_result, h=10)  # Adjust 'k' as needed
+# 
+# # Step 3: Create a data frame that contains both cluster assignments
+# cluster_comparison <- data.frame(
+#   id = 1:nrow(tsne_df),
+#   hdbscan_cluster = hdbscan_clusters,
+#   hc_cluster = hc_clusters
+# )
+# 
+# # Step 4: Join and compare clusters to find monophyletic clusters
+# # Group by HDBSCAN cluster and check if all points in the same HDBSCAN cluster are in a single hierarchical cluster
+# monophyletic_clusters <- cluster_comparison %>%
+#   group_by(hdbscan_cluster) %>%
+#   summarize(
+#     unique_hc_clusters = n_distinct(hc_cluster),
+#     .groups = 'drop'
+#   ) %>%
+#   filter(unique_hc_clusters == 1)  # Monophyletic if only one hierarchical cluster appears
+# 
+# # Step 5: Find the non-monophyletic clusters (those with more than one unique hierarchical cluster)
+# non_monophyletic_clusters <- cluster_comparison %>%
+#   filter(hdbscan_cluster %in% setdiff(unique(hdbscan_clusters), monophyletic_clusters$hdbscan_cluster)) %>%
+#   pull(hdbscan_cluster) %>%
+#   unique()
+# 
+# z <- cluster_comparison %>%
+#   filter(hdbscan_cluster %in% non_monophyletic_clusters)
+# 
+# z2 <- table(z[,c('hdbscan_cluster', 'hc_cluster')])
+# 
+# nm_clusters_remove <- c(names(which(rowSums(z2)<10)),0)
+# 
+# z3 <- z2[!(rownames(z2) %in% nm_clusters_remove),]
+# 
+# z4 <- z3/rowSums(z3) 
+# max_prop_row <- apply(z4,1, max)
+# keep_rows <- which(max_prop_row>=0.9)
+# if(length(keep_rows)==1){
+#   hc <- names(which(z5<0.1 & z5>0))
+#   hdb <- names(keep_rows)
+#   samples_to_remove2 <- rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster %in% hc]
+# }
+# 
+# if(length(keep_rows)>1){
+#   z5 <- z4[keep_rows,]
+#   samples_to_remove <- apply(z5,1, function(x){
+#     hc <- names(which(x<0.1 & x>0))
+#   })
+#   samples_to_remove2 <- c()
+#   
+#   for(i in 1:length(samples_to_remove)){
+#     hdb <- names(samples_to_remove)[i]
+#     hc <- (samples_to_remove)[i]
+#     samples_to_remove2 <- c(samples_to_remove2, 
+#                             unlist(rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster %in% hc]))
+#   }
+# }
 #####
 
 min_cluster_size <- 10
@@ -200,8 +201,8 @@ hdb_df2 <- data.frame(sample=names(d),hdb_cluster=hdbscan_result$cluster)
 small_clusters <- names(which(table(hdb_df2$hdb_cluster) < min_cluster_size))
 # Set the cluster value to 0 for those clusters
 hdb_df2$hdb_cluster[hdb_df2$hdb_cluster %in% small_clusters] <- 0
-hdb_df2$hdb_cluster[hdb_df2$sample %in% samples_to_remove2] <- 0
-hdb_df2$hdb_cluster[hdb_df2$hdb_cluster %in% nm_clusters_remove] <- 0
+# hdb_df2$hdb_cluster[hdb_df2$sample %in% samples_to_remove2] <- 0
+# hdb_df2$hdb_cluster[hdb_df2$hdb_cluster %in% nm_clusters_remove] <- 0
 
 hdb_df2$hdb_cluster[which(hdb_df2$hdb_cluster==0)] <- NA
 
