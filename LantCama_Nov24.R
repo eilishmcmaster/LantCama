@@ -53,53 +53,53 @@ morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCE
 svdq_pop_colours <- named_list_maker(m2$svdq_pop, 'Spectral', 11)
 svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
 
-
-# #### pca ####
-dms_maf2 <- remove.by.maf(dms, 0.02)
-
-gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
-gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
-
-g_pca_df <- gen_pca[["scores"]] #extract PCs
-g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # some in DArT are not in meta?
-
-pcnames <- paste0(colnames(g_pca_df)," (",
-                  paste(round(gen_pca[["eig"]][1:6]/sum(gen_pca[["eig"]]) *100, 2)),
-                  "%)") #create names for axes
-
-pca_plot1 <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=morphid2))+ xlab(pcnames[1])+ylab(pcnames[2])+
-  geom_point(size=0.5)+
-  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  labs(colour="Morphotype")+
-  theme(legend.key.size = unit(0, 'lines'))+
-  guides(colour = guide_legend(title.position = "top"))+
-  scale_colour_manual(values=morphid_colours)
-pca_plot1
-
-pca_plot2 <- ggplot(g_pca_df2, aes(x=PC3, y=PC4, colour=morphid2))+ xlab(pcnames[3])+ylab(pcnames[4])+
-  geom_point(size=2)+
-  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  labs(colour="", shape="")+
-  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
-        legend.text = element_text(face="italic"),
-        axis.title = element_text(size=10), axis.text = element_text(size=8))+
-  guides(colour = guide_legend(title.position = "top")) +
-  scale_colour_manual(values=morphid_colours)
-
-pca_plot3 <- ggplot(g_pca_df2, aes(x=PC5, y=PC6, colour=morphid2))+ xlab(pcnames[5])+ylab(pcnames[6])+
-  geom_point(size=2)+
-  theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  labs(colour="", shape="")+
-  theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
-        legend.text = element_text(face="italic"),
-        axis.title = element_text(size=10), axis.text = element_text(size=8))+
-  guides(colour = guide_legend(title.position = "top"))+
-  scale_colour_manual(values=morphid_colours)
-
-
-all3_pca_plots <- ggarrange(pca_plot1, pca_plot2, pca_plot3, labels=c("A","B","C"),
-                            common.legend = TRUE, ncol=3, legend = "bottom")
-all3_pca_plots
+# 
+# # #### pca ####
+# dms_maf2 <- remove.by.maf(dms, 0.02)
+# 
+# gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
+# gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
+# 
+# g_pca_df <- gen_pca[["scores"]] #extract PCs
+# g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # some in DArT are not in meta?
+# 
+# pcnames <- paste0(colnames(g_pca_df)," (",
+#                   paste(round(gen_pca[["eig"]][1:6]/sum(gen_pca[["eig"]]) *100, 2)),
+#                   "%)") #create names for axes
+# 
+# pca_plot1 <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=morphid2))+ xlab(pcnames[1])+ylab(pcnames[2])+
+#   geom_point(size=0.5)+
+#   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+#   labs(colour="Morphotype")+
+#   theme(legend.key.size = unit(0, 'lines'))+
+#   guides(colour = guide_legend(title.position = "top"))+
+#   scale_colour_manual(values=morphid_colours)
+# pca_plot1
+# 
+# pca_plot2 <- ggplot(g_pca_df2, aes(x=PC3, y=PC4, colour=morphid2))+ xlab(pcnames[3])+ylab(pcnames[4])+
+#   geom_point(size=2)+
+#   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+#   labs(colour="", shape="")+
+#   theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+#         legend.text = element_text(face="italic"),
+#         axis.title = element_text(size=10), axis.text = element_text(size=8))+
+#   guides(colour = guide_legend(title.position = "top")) +
+#   scale_colour_manual(values=morphid_colours)
+# 
+# pca_plot3 <- ggplot(g_pca_df2, aes(x=PC5, y=PC6, colour=morphid2))+ xlab(pcnames[5])+ylab(pcnames[6])+
+#   geom_point(size=2)+
+#   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
+#   labs(colour="", shape="")+
+#   theme(legend.key.size = unit(0, 'lines'), legend.position = "right",
+#         legend.text = element_text(face="italic"),
+#         axis.title = element_text(size=10), axis.text = element_text(size=8))+
+#   guides(colour = guide_legend(title.position = "top"))+
+#   scale_colour_manual(values=morphid_colours)
+# 
+# 
+# all3_pca_plots <- ggarrange(pca_plot1, pca_plot2, pca_plot3, labels=c("A","B","C"),
+#                             common.legend = TRUE, ncol=3, legend = "bottom")
+# all3_pca_plots
 
 
 ### TSNE ####
@@ -128,36 +128,67 @@ colnames(tsne_df) <- c("tSNE1", "tSNE2")  # Rename columns for clarity
 
 # Apply HDBSCAN to the t-SNE coordinates (2D space)
 hdbscan_result <- hdbscan(tsne_df, minPts = 5)
-######
-hdb_scan_qc <- data.frame(cluster=hdbscan_result$cluster, prob=hdbscan_result$membership_prob,
-                          cd = hdbscan_result$coredist, os = hdbscan_result$outlier_scores)
-hdb_scan_qc_summary_stats <- hdb_scan_qc %>%
-  # filter(cluster != 0) %>%  # Exclude cluster 0
-  group_by(cluster) %>%
-  summarise(
-    mean_os = mean(os, na.rm = TRUE),  # Compute mean of outlier scores, ignoring NA values
-    sd_os = sd(os, na.rm = TRUE)       # Compute standard deviation of outlier scores
+hdbscan_clusters <- hdbscan_result$cluster
+
+# Step 2: Run hierarchical clustering
+hc_result <- hclust(d, method = "average")
+hc_clusters <- cutree(hc_result, k = length(hdbscan_clusters))  # Adjust 'k' as needed
+
+# Step 3: Create a data frame that contains both cluster assignments
+cluster_comparison <- data.frame(
+  id = 1:nrow(tsne_df),
+  hdbscan_cluster = hdbscan_clusters,
+  hc_cluster = hc_clusters
+)
+
+# Step 4: Join and compare clusters to find monophyletic clusters
+# Group by HDBSCAN cluster and check if all points in the same HDBSCAN cluster are in a single hierarchical cluster
+monophyletic_clusters <- cluster_comparison %>%
+  group_by(hdbscan_cluster) %>%
+  summarize(
+    unique_hc_clusters = n_distinct(hc_cluster),
+    .groups = 'drop'
   ) %>%
-  mutate( # Z-score indicates how many standard deviations an element is from the mean. 
-    z_score = (mean_os - mean(mean_os)) / sd(mean_os)
-  )
+  filter(unique_hc_clusters == 1)  # Monophyletic if only one hierarchical cluster appears
 
-ggplot()+
-  geom_histogram(data=hdb_scan_qc, mapping=aes(x=cd))+
-  facet_wrap(~cluster)
+# Step 5: Find the non-monophyletic clusters (those with more than one unique hierarchical cluster)
+non_monophyletic_clusters <- cluster_comparison %>%
+  filter(hdbscan_cluster %in% setdiff(unique(hdbscan_clusters), monophyletic_clusters$hdbscan_cluster)) %>%
+  pull(hdbscan_cluster) %>%
+  unique()
 
-ggplot()+
-  geom_histogram(data=hdb_scan_qc, mapping=aes(x=os))+
-  facet_wrap(~cluster)+
-  geom_vline(data = hdb_scan_qc_summary_stats, aes(xintercept = mean_os+1.5*(sd_os)), linetype = "dashed", color = "red")
+z <- cluster_comparison %>%
+  filter(hdbscan_cluster %in% non_monophyletic_clusters)
 
-hdb_scan_qc_summary_stats
+z2 <- table(z[,c('hdbscan_cluster', 'hc_cluster')])
 
-unusually_high_clusters <- hdb_scan_qc_summary_stats %>%
-  filter(z_score > 1.5)
+nm_clusters_remove <- c(names(which(rowSums(z2)<10)),0)
 
-hdbscan_result$cluster[which(hdbscan_result$cluster %in% unusually_high_clusters$cluster)] <- 0 # remove unusual 
+z3 <- z2[!(rownames(z2) %in% nm_clusters_remove),]
 
+z4 <- z3/rowSums(z3) 
+max_prop_row <- apply(z4,1, max)
+keep_rows <- which(max_prop_row>=0.9)
+if(length(keep_rows)==1){
+  hc <- names(which(z5<0.1 & z5>0))
+  hdb <- names(keep_rows)
+  samples_to_remove2 <- rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster==hc]
+}
+
+if(length(keep_rows)>1){
+  z5 <- z4[keep_rows,]
+  samples_to_remove <- apply(z5,1, function(x){
+    hc <- names(which(x<0.1 & x>0))
+  })
+  samples_to_remove2 <- c()
+  
+  for(i in 1:length(samples_to_remove)){
+    hdb <- names(samples_to_remove)[i]
+    hc <- (samples_to_remove)[i]
+    samples_to_remove2 <- c(samples_to_remove2, 
+                            unlist(rownames(cluster_comparison)[cluster_comparison$hdbscan_cluster==hdb & cluster_comparison$hc_cluster %in% hc]))
+  }
+}
 #####
 
 min_cluster_size <- 10
@@ -166,6 +197,8 @@ hdb_df2 <- data.frame(sample=names(d),hdb_cluster=hdbscan_result$cluster)
 small_clusters <- names(which(table(hdb_df2$hdb_cluster) < min_cluster_size))
 # Set the cluster value to 0 for those clusters
 hdb_df2$hdb_cluster[hdb_df2$hdb_cluster %in% small_clusters] <- 0
+hdb_df2$hdb_cluster[hdb_df2$sample %in% samples_to_remove2] <- 0
+hdb_df2$hdb_cluster[hdb_df2$hdb_cluster %in% nm_clusters_remove] <- 0
 
 hdb_df2$hdb_cluster[which(hdb_df2$hdb_cluster==0)] <- NA
 
@@ -207,6 +240,8 @@ tsne_plot2 <- ggplot(hdb_df2, aes(x = tSNE1, y = tSNE2, color = morphid2)) +
 tsne_plot1
 
 ggarrange(pca_plot1, tsne_plot2, tsne_plot1, nrow=3, align="hv")
+
+
 
 
 #
@@ -289,7 +324,7 @@ library(multipanelfigure)
 
 combined_plots <- multi_panel_figure(
   width = c(7.5, 25),   # Adjust these dimensions as needed
-  height = c(7.5,7.5,7.5),
+  height = c(7,7,7),
   unit = "cm",
   panel_label_type = "upper-roman"
 )
@@ -303,49 +338,49 @@ combined_plots %<>%
 
 ggsave('LantCama/outputs/Figure1_combined_plots.pdf', combined_plots, width = 34, height = 24, units = "cm")
 
-
-##### LEA ####
-
-library(LEA)
-
-nd_lea <- dart2lea(dms, RandRbase, species, dataset)
-kvalrange <- 1:15
 # 
-# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 10, project = "new", CPU=8)
+# ##### LEA ####
 # 
-# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
-
-load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
-
-plot(snmf1, col = "blue", pch = 19, cex = 1.2)
-best = which.min(cross.entropy(snmf1, K = K_chosen))
-my.colors <- c("tomato", "lightblue",
-               "olivedrab", "gold",'blue')
-
-K_chosen <- 12
-
-barchart(snmf1, K = K_chosen, run = best,
-         border = NA, space = 0,
-         col = my.colors,
-         xlab = "Individuals",
-         ylab = "Ancestry proportions",
-         main = "Ancestry matrix") -> bp
-
-axis(1, at = 1:length(bp$order),
-     labels = bp$order, las=1,
-     cex.axis = .4)
-
-qmatrix_df <- as_tibble(Q(snmf1, K = K_chosen, run=which.min(cross.entropy(snmf1, K = K_chosen)))) %>%
-  mutate(sample = dms$sample_names) %>%
-  pivot_longer(-sample, names_to = "lea_cluster", values_to = "proportion")
-
-qmatrix_df2 <- merge(qmatrix_df, hdb_df2, by='sample')
-
-ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = lea_cluster)) +
-  geom_bar(stat = "identity", width = 1) +
-  facet_grid(~cluster, scales = "free_x", space="free_x")+
-  theme_few() +
-  scale_fill_brewer(palette = "Set3") + # Use a more subtle color palette
-  theme(axis.text.x = element_blank())+
-  scale_y_continuous(limits = c(0,1.001), expand=c(0,0))+
-  labs(x = "Individuals", y = "Ancestry Proportion", fill = "Cluster")
+# library(LEA)
+# 
+# nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+# kvalrange <- 1:15
+# # 
+# # snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 10, project = "new", CPU=8)
+# # 
+# # save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+# 
+# load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+# 
+# plot(snmf1, col = "blue", pch = 19, cex = 1.2)
+# best = which.min(cross.entropy(snmf1, K = K_chosen))
+# my.colors <- c("tomato", "lightblue",
+#                "olivedrab", "gold",'blue')
+# 
+# K_chosen <- 12
+# 
+# barchart(snmf1, K = K_chosen, run = best,
+#          border = NA, space = 0,
+#          col = my.colors,
+#          xlab = "Individuals",
+#          ylab = "Ancestry proportions",
+#          main = "Ancestry matrix") -> bp
+# 
+# axis(1, at = 1:length(bp$order),
+#      labels = bp$order, las=1,
+#      cex.axis = .4)
+# 
+# qmatrix_df <- as_tibble(Q(snmf1, K = K_chosen, run=which.min(cross.entropy(snmf1, K = K_chosen)))) %>%
+#   mutate(sample = dms$sample_names) %>%
+#   pivot_longer(-sample, names_to = "lea_cluster", values_to = "proportion")
+# 
+# qmatrix_df2 <- merge(qmatrix_df, hdb_df2, by='sample')
+# 
+# ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = lea_cluster)) +
+#   geom_bar(stat = "identity", width = 1) +
+#   facet_grid(~cluster, scales = "free_x", space="free_x")+
+#   theme_few() +
+#   scale_fill_brewer(palette = "Set3") + # Use a more subtle color palette
+#   theme(axis.text.x = element_blank())+
+#   scale_y_continuous(limits = c(0,1.001), expand=c(0,0))+
+#   labs(x = "Individuals", y = "Ancestry Proportion", fill = "Cluster")
