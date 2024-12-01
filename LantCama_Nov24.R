@@ -296,36 +296,115 @@ m2$cluster <- hdb_df2$cluster[match(hdb_df2$sample, m2$sample)] %>% as.vector()
 dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "", paste0("_",dms$meta$cluster)))
 # ### LEA ####
 # 
-# # library(LEA)
-# # 
-# # nd_lea <- dart2lea(dms, RandRbase, species, dataset)
-# # kvalrange <- 1:20
-# # snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
-# # 
-# # save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+# library(LEA)
+# 
+# nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+# kvalrange <- 1:20
+# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
+# 
+# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 # # # #
-# load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
-# 
-# K_chosen <- 10
-# best = which.min(cross.entropy(snmf1, K = K_chosen))
-# plot(snmf1, col = "blue", pch = 19, cex = 1.2)
-# 
-# 
-# qmatrix_df <- as_tibble(Q(snmf1, K = K_chosen, run=which.min(cross.entropy(snmf1, K = K_chosen)))) %>%
-#   mutate(sample = dms$sample_names) %>%
-#   pivot_longer(-sample, names_to = "lea_cluster", values_to = "proportion")
-# 
-# qmatrix_df2 <- merge(qmatrix_df, hdb_df2, by='sample')
-# 
-# ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = lea_cluster)) +
-#   geom_bar(stat = "identity", width = 1) +
-#   facet_grid(~cluster, scales = "free_x", space="free_x")+
-#   theme_few() +
-#   scale_fill_brewer(palette = "Set3") + # Use a more subtle color palette
-#   theme(axis.text.x = element_blank())+
-#   scale_y_continuous(limits = c(0,1.001), expand=c(0,0))+
-#   labs(x = "Individuals", y = "Ancestry Proportion", fill = "Cluster")
-# 
+load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+
+K_chosen <- 10
+best = which.min(cross.entropy(snmf1, K = K_chosen))
+plot(snmf1, col = "blue", pch = 19, cex = 1.2)
+
+
+qmatrix_df <- as_tibble(Q(snmf1, K = K_chosen, run=which.min(cross.entropy(snmf1, K = K_chosen)))) %>%
+  mutate(sample = dms$sample_names) %>%
+  pivot_longer(-sample, names_to = "lea_cluster", values_to = "proportion")
+
+qmatrix_df2 <- merge(qmatrix_df, hdb_df2, by='sample')
+
+qmatrix_df2$cluster[is.na(qmatrix_df2$cluster)] <- "Unclustered"
+
+qmatrix_df2 <- qmatrix_df2 %>%
+  mutate(lea_cluster = gsub("V", "", lea_cluster))
+
+# Order samples by latitude
+qmatrix_df2 <- qmatrix_df2 %>%
+  arrange(lat) %>%  # Arrange by latitude
+  mutate(sample = factor(sample, levels = unique(sample)))  # Preserve order in factor
+
+# Plot ancestry proportions with samples ordered by latitude
+ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = lea_cluster)) +
+  geom_bar(stat = "identity", width = 1) +
+  facet_grid(~cluster, scales = "free_x", space = "free_x") +
+  theme_few() +
+  scale_fill_brewer(palette = "Set3") + # Use a more subtle color palette
+  theme(axis.text.x = element_blank()) +
+  scale_y_continuous(limits = c(0, 1.001), expand = c(0, 0)) +
+  labs(x = "", y = "Ancestry Proportion", fill = "Cluster")
+
+
+#
+
+
+# Plot ancestry proportions with latitude annotation
+main_plot <- ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = factor(lea_cluster))) +
+  geom_bar(stat = "identity", width = 1) +
+  facet_grid(~cluster, scales = "free_x", space = "free_x") +
+  theme_few() +
+  scale_fill_brewer(palette = "Set3") + # Use a more subtle color palette
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank(),  # Remove axis ticks
+        panel.spacing = unit(0, "lines"),
+        plot.margin = margin(2, 2, -5, 2, unit = "pt"))+  # Smaller margins (top, right, bottom, left)) +
+  scale_y_continuous(limits = c(0, 1.001), expand = c(0, 0)) +
+  labs(x = "", y = "Ancestry Proportion", fill = "Cluster")
+
+
+
+lat_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = lat)) +
+  geom_tile() +
+  facet_grid(~cluster, scales = "free_x", space = "free_x") +
+  scale_fill_gradient2(
+    low = "red", 
+    mid = "white", 
+    high = "blue", 
+    midpoint = mean(qmatrix_df2$lat, na.rm = TRUE),
+    name = "Latitude"
+  ) +
+  labs(fill = "Latitude") +
+  theme_void() +
+  scale_y_continuous(limits = c(0.5, 1.501), expand = c(0, 0)) +
+  theme(
+    legend.position = "right",
+    panel.spacing = unit(0, "lines"),
+    strip.text = element_blank(),  # Remove facet panel text
+    axis.text = element_blank(),   # Remove axis text
+    axis.ticks = element_blank(),  # Remove axis ticks
+    axis.title = element_blank(),   # Remove axis titles
+    plot.margin = margin(0, 2, 2, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+  )
+
+
+cluster_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = cluster)) +
+  geom_tile() +
+  scale_fill_manual(values=tsne_cols)+
+  facet_grid(~cluster, scales = "free_x", space = "free_x") +
+  labs(fill = "Latitude") +
+  theme_void() +
+  scale_y_continuous(limits = c(0.5, 1.501), expand = c(0, 0)) +
+  theme(
+    legend.position = "right",
+    panel.spacing = unit(0, "lines"),
+    strip.text = element_blank(),  # Remove facet panel text
+    axis.text = element_blank(),   # Remove axis text
+    axis.ticks = element_blank(),  # Remove axis ticks
+    axis.title = element_blank(),   # Remove axis titles
+    plot.margin = margin(0, 2, 2, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+  )
+
+
+# Combine the main plot and the latitude bar
+library(patchwork) # For combining plots
+combined_plot <- main_plot /cluster_plot /lat_plot +
+  plot_layout(heights = c(1,0.1,0.1))  # Adjust relative heights of the annotation and the main plot
+
+combined_plot
+
 # ### FST ###
 
 
