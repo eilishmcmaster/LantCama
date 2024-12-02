@@ -49,6 +49,7 @@ meta      <- read.meta.data.full.analyses.df(d1, basedir, species, dataset)
 
 d3        <- dart.meta.data.merge(d1, meta) 
 # EA_only <- c(meta$sample_names[which(meta$analyses[,'country'] %in% c('Australia (NSW)','Australia (QLD)'))])
+
 EA_only <- c(meta$sample_names[which(!is.na(meta$analyses[,'EA_only']))])
 
 d3.1 <- remove.by.list(d3,EA_only)
@@ -84,7 +85,7 @@ pcnames <- paste0(colnames(g_pca_df)," (",
 pca_plot1 <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=morphid2))+ xlab(pcnames[1])+ylab(pcnames[2])+
   geom_point(size=0.5)+
   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  labs(colour="Morphotype")+
+  labs(colour="`HBDSCAN Cluster`")+
   theme(legend.key.size = unit(0, 'lines'))+
   guides(colour = guide_legend(title.position = "top"))+
   scale_colour_manual(values=morphid_colours)
@@ -123,7 +124,7 @@ d <- dist(genotype_matrix, method = "euclidean")
 d_matrix <- as.matrix(d)
 
 # Perform t-SNE on the distance matrix (or you could use the original genotype matrix)
-tsne_result <- Rtsne(d, dims = 2, perplexity = 16, 
+tsne_result <- Rtsne(d, dims = 2, perplexity = 18, 
                      check_duplicates = FALSE, theta=0,
                      is_distance=TRUE,
                      num_threads=4)
@@ -179,10 +180,22 @@ hdb_cluster_unique <- hdb_cluster_unique[!is.na(hdb_cluster_unique)]
 new_cluster_alphabetical <- LETTERS[1:length(hdb_cluster_unique)]
 hdb_df2$cluster <- new_cluster_alphabetical[match(hdb_df2$hdb_cluster, hdb_cluster_unique)]
 
-tsne_cols <- c(rainbow(length(unique(hdb_df2$cluster))))
-names(tsne_cols) <- unique(hdb_df2$cluster)
-# Plot the t-SNE result with HDBSCAN clusters
 
+# 
+# tsne_cols <- c(rainbow(length(unique(hdb_df2$cluster))))
+# names(tsne_cols) <- unique(hdb_df2$cluster)
+n_clusters <- length(unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))  # Exclude NA from the count
+tsne_cols <- brewer.pal(n_clusters, "Paired")
+tsne_cols <- c("white", tsne_cols)
+names(tsne_cols) <- c(NA, unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))
+
+#### write_out_clusters ####
+out_cols <- c('sample','lat','long','site','site_original','morphid2','cluster')
+write.xlsx(hdb_df2[,out_cols], 'LantCama/outputs/LantCama_tsne_HDBSCAN_clusters.xlsx')
+
+
+#### plot tsne ####
+# Plot the t-SNE result with HDBSCAN clusters
 hull <- hdb_df2 %>% 
   filter(!is.na(cluster)) %>%
   group_by(cluster) %>% 
@@ -190,7 +203,7 @@ hull <- hdb_df2 %>%
 
 tsne_plot1 <- ggplot(hdb_df2, aes(x = tSNE1, y = tSNE2, color = factor(cluster))) +
   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  geom_shape(data=hull, mapping=aes(group=cluster), color="black", linetype='dashed', alpha=0.1,
+  geom_shape(data=hull, mapping=aes(group=cluster), color="black", linetype='dashed', alpha=0,
              expand = 0.02, radius=0.01)+
   geom_point(size=0.5) +
   theme(legend.key.size = unit(0, 'lines'))+
@@ -199,12 +212,12 @@ tsne_plot1 <- ggplot(hdb_df2, aes(x = tSNE1, y = tSNE2, color = factor(cluster))
 
 tsne_plot2 <- ggplot(hdb_df2, aes(x = tSNE1, y = tSNE2, color = morphid2)) +
   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  geom_shape(data=hull, mapping=aes(group=cluster), color="black", linetype='dashed', alpha=0.1,
+  geom_shape(data=hull, mapping=aes(group=cluster), color="black", linetype='dashed', alpha=0,
              expand = 0.02, radius=0.01)+
   theme(legend.key.size = unit(0, 'lines'))+
   geom_point(size=0.5) +
   scale_color_manual(values = morphid_colours) +
-  labs( x = "t-SNE 1", y = "t-SNE 2", color = "Morphotype")
+  labs( x = "t-SNE 1", y = "t-SNE 2", color = "`HBDSCAN Cluster`")
 
 tsne_plot1
 
@@ -224,6 +237,7 @@ row_anno <- rowAnnotation(
   annotation_legend_param = list(
     cluster = list(title = "HDBSCAN Cluster")
   ),
+  
   annotation_name_gp = gpar(fontsize = 0),
   na_col = "white"
   )
@@ -270,6 +284,7 @@ ht <- Heatmap(
   right_annotation = c(row_anno, row_anno2,row_anno3),
   show_column_names = FALSE,  # Remove column names
   show_row_names = FALSE,   
+  show_heatmap_legend = FALSE,
   col = colorRamp2(c(min(d_matrix), max(d_matrix)), c("white", "black")),
   row_dend_width = unit(3, "cm"),          # Adjust row dendrogram size
   column_dend_height = unit(3, "cm")
@@ -294,22 +309,24 @@ combined_plots %<>%
 ggsave('LantCama/outputs/Figure1_combined_plots.pdf', combined_plots, width = 34, height = 23, units = "cm")
 
 # add clusters to DMS
-dms$meta$cluster <- hdb_df2$cluster[match(hdb_df2$sample, dms$sample_names)] %>% as.vector()
-m2$cluster <- hdb_df2$cluster[match(hdb_df2$sample, m2$sample)] %>% as.vector()
+dms$meta$cluster <- hdb_df2$cluster[match(dms$sample_names, hdb_df2$sample)] %>% as.vector()
 dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "", paste0("_",dms$meta$cluster)))
+
+m2$cluster <- hdb_df2$cluster[match(m2$sample,hdb_df2$sample)] %>% as.vector()
+m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("_",m2$cluster)))
 # ### LEA ####
-
-library(LEA)
-
-nd_lea <- dart2lea(dms, RandRbase, species, dataset)
-kvalrange <- 1:20
-snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
-
-save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+# 
+# library(LEA)
+# 
+# nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+# kvalrange <- 1:20
+# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
+# 
+# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 # # # #
 load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 
-K_chosen <- 7
+K_chosen <- 5
 best = which.min(cross.entropy(snmf1, K = K_chosen))
 plot(snmf1, col = "blue", pch = 19, cex = 1.2)
 
@@ -339,6 +356,7 @@ main_plot <- ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = factor(l
   geom_bar(stat = "identity", width = 1) +
   facet_grid(~cluster, scales = "free_x", space = "free_x") +
   theme_few() +
+  # scale_fill_brewer(palette = "Greys") +  # Use a more subtle color palette
   scale_fill_brewer(palette = "Set3") +  # Use a more subtle color palette
   theme(
     axis.title.y = element_text(size = 11, angle = 0, hjust = 1, vjust = 0.5),  # Right justified and centered vertically
@@ -408,156 +426,121 @@ combined_plots2 <- multi_panel_figure(
 # Fill the panels with the respective plots
 combined_plots2 %<>%
   fill_panel(pca_plot1 + theme(legend.position = "none"), column = 1, row = 1, label = "A") %<>%
-  fill_panel(tsne_plot2+ theme(legend.position = "none"), column = 1, row = 2, label = "B") %<>%
-  fill_panel(tsne_plot1+ theme(legend.position = "none"), column = 1, row = 3, label = "C") %<>%
+  fill_panel(tsne_plot2 + theme(legend.position = "none"), column = 1, row = 2, label = "B") %<>%
+  fill_panel(tsne_plot1 + theme(legend.position = "none"), column = 1, row = 3, label = "C") %<>%
   fill_panel(draw(ht, merge_legends = TRUE), column = 2, row = 1:3, label = "D") %<>%
   fill_panel(combined_lea_plot, column = 1:2, row = 4, label = "E")
 
 
 ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 34, height = 30, units = "cm")
 
-# ### FST ###
+### FST ###
+# remove site_clusters where n=4
+sppop_freq <- as.data.frame(table(dms$meta$site_cluster))
+not_n1_site_clusters <- as.vector(sppop_freq[sppop_freq$Freq<3,1]) #remove groups where n<=1
+not_n1_samples <- dms$sample_names[which(!(dms$meta$site_cluster %in% not_n1_site_clusters)& !is.na(dms$meta$site_cluster))]
+fst_dms <- remove.by.list(dms, not_n1_samples)
 
-# 
-# 
-# #### FST ####
-# # remove sites where n=4
-# sppop_freq <- as.data.frame(table(dms$meta$site))
-# not_n1_sites <- as.vector(sppop_freq[sppop_freq$Freq<2,1]) #remove groups where n<=1
-# not_n1_samples <- dms$sample_names[which(!(dms$meta$site %in% not_n1_sites)& !is.na(dms$meta$site))]
-# fst_dms <- remove.by.list(dms, not_n1_samples)
-# 
-# length(fst_dms$sample_names)
-# length(fst_dms$locus_names)
-# 
-# gds_file <- dart2gds(fst_dms, RandRbase, species, dataset)
-# pFst      <- population.pw.Fst(fst_dms, fst_dms$meta$site, RandRbase,species,dataset, maf_val=0.02, miss_val=0.8) #calculates genetic distance
-# pS        <- population.pw.spatial.dist(fst_dms, fst_dms$meta$site) #calculates geographic distance between populations
-# 
-# ####plot IBD plot
-# 
-# library(reshape2) #for melting data
-# library(vegan) #for mantel test
-# 
-# # Make self comparisons NA
-# diag(pFst$Fst) <- NA
-# diag(pS$S) <- NA
-# 
-# #Mantel test 
-# man <- mantel(xdis = pS$S, ydis = pFst$Fst, permutations = 10000, na.rm = TRUE) #mantel test, finds if matrices are signficantly similar
-# man
-# 
-# # mantel plot
-# Fst_sig <- cbind(melt(pS$S), unlist(as.list(pFst$Fst)))
-# colnames(Fst_sig)[3] <- "Geo_dist"
-# colnames(Fst_sig)[4] <- "Fst"
-# Fst_sig$Geo_dist2 <-Fst_sig$Geo_dist/1000 
-# 
-# # adding metadata for sites
-# Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site","morphid2")]), by.x="Var1", by.y="site", all.y=FALSE)
-# Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site","morphid2")]), by.x="Var2", by.y="site", all.y=FALSE)
-# Fst_sig2$same_morphid2 <- ifelse(Fst_sig2$morphid2.x == Fst_sig2$morphid2.y, "Intra-morph", "Inter-morph")
-# 
-# library(ggforce)
-# fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_morphid2))+geom_point(size=1, alpha=0.3)+
-#   labs(x="Distance (km)", y="FST", colour="Comparison")+
-#   # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
-#   theme_bw()+
-#   geom_hline(yintercept = 0.3, linetype="dotted")+
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
-# fstp1
-# 
-# 
-# #
-# # adding metadata for sites
-# Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site","cluster")]), by.x="Var1", by.y="site", all.y=FALSE)
-# Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site","cluster")]), by.x="Var2", by.y="site", all.y=FALSE)
-# Fst_sig2$same_cluster <- ifelse(Fst_sig2$cluster.x == Fst_sig2$cluster.y, "Intra-morph", "Inter-morph")
-# 
-# library(ggforce)
-# fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_cluster))+geom_point(size=1, alpha=0.3)+
-#   labs(x="Distance (km)", y="FST", colour="Comparison")+
-#   # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
-#   theme_bw()+
-#   geom_hline(yintercept = 0.3, linetype="dotted")+
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
-# fstp1
-# 
-# 
-# # 
-# # 
-# # # adding metadata for sites
-# # Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site","svdq_pop_label")]), by.x="Var1", by.y="site", all.y=FALSE)
-# # Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site","svdq_pop_label")]), by.x="Var2", by.y="site", all.y=FALSE)
-# # Fst_sig2$same_svdq_pop_label <- ifelse(Fst_sig2$svdq_pop_label.x == Fst_sig2$svdq_pop_label.y, "Intra-morph", "Inter-morph")
-# # 
-# # library(ggforce)
-# # fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_svdq_pop_label))+geom_point(size=1, alpha=0.3)+
-# #   labs(x="Distance (km)", y="FST", colour="Comparison")+
-# #   geom_hline(yintercept = 0.3, linetype="dotted")+
-# #   # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
-# #   theme_bw()+
-# #   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
-# # fstp1
-# 
-# # ggsave("BossFrag/outputs/paper/supfig2_BossFrag_manning_fst.pdf",
-# #        fstp1, width = 15, height = 15, units = "cm", dpi=600)
-# 
-# paste("Mantel statistic r is", round(man$statistic, 3), ", P =", man$signif)
-# 
-# # Make heatmaps
-# # geo dist
-# geo_d <-pS$S #this is a square matrix
-# mat <- geo_d/1000 # convert to km 
-# 
-# #FST
-# mat2 <-pFst$Fst
-# diag(mat2) <- NA
-# 
-# order_hm <- Heatmap(mat2,
+length(fst_dms$sample_names)
+length(unique(fst_dms$meta$site_cluster))
+length(fst_dms$locus_names)
+
+gds_file <- dart2gds(fst_dms, RandRbase, species, dataset)
+pFst      <- population.pw.Fst(fst_dms, fst_dms$meta$site_cluster, RandRbase,species,dataset, maf_val=0.02, miss_val=0.8) #calculates genetic distance
+pS        <- population.pw.spatial.dist(fst_dms, fst_dms$meta$site_cluster) #calculates geographic distance between populations
+
+####plot IBD plot
+
+library(reshape2) #for melting data
+library(vegan) #for mantel test
+
+# Make self comparisons NA
+diag(pFst$Fst) <- NA
+diag(pS$S) <- NA
+
+#Mantel test
+man <- mantel(xdis = pS$S, ydis = pFst$Fst, permutations = 10000, na.rm = TRUE) #mantel test, finds if matrices are signficantly similar
+man
+
+# mantel plot
+Fst_sig <- cbind(melt(pS$S), unlist(as.list(pFst$Fst)))
+colnames(Fst_sig)[3] <- "Geo_dist"
+colnames(Fst_sig)[4] <- "Fst"
+Fst_sig$Geo_dist2 <-Fst_sig$Geo_dist/1000
+
+# adding metadata for site_clusters
+Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site_cluster","cluster")]), by.x="Var1", by.y="site_cluster", all.y=FALSE)
+Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site_cluster","cluster")]), by.x="Var2", by.y="site_cluster", all.y=FALSE)
+Fst_sig2$same_cluster <- ifelse(Fst_sig2$cluster.x == Fst_sig2$cluster.y, "Intra-cluster", "Inter-cluster")
+
+library(ggforce)
+fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_cluster))+geom_point(size=1, alpha=0.3)+
+  labs(x="Distance (km)", y="FST", colour="Comparison")+
+  # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
+  theme_bw()+
+  geom_hline(yintercept = 0.4, linetype="dotted")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
+fstp1
+
+
+# ggsave("BossFrag/outputs/paper/supfig2_BossFrag_manning_fst.pdf",
+#        fstp1, width = 15, height = 15, units = "cm", dpi=600)
+
+paste("Mantel statistic r is", round(man$statistic, 3), ", P =", man$signif)
+
+# Make heatmaps
+# geo dist
+geo_d <-pS$S #this is a square matrix
+mat <- geo_d/1000 # convert to km
+
+#FST
+mat2 <-pFst$Fst
+diag(mat2) <- NA
+
+order_hm <- Heatmap(mat2,
+                    cluster_rows = TRUE,
+                    cluster_columns = TRUE)
+od <- colnames(mat2)[column_order(order_hm)]
+
+mat = mat[od, od]
+mat2 = mat2[od, od]
+
+# order_hm <- Heatmap(mat,
 #                     cluster_rows = TRUE,
 #                     cluster_columns = TRUE)
-# od <- colnames(mat2)[column_order(order_hm)]
-# 
+# od <- colnames(mat)[column_order(order_hm)]
+#
 # mat = mat[od, od]
 # mat2 = mat2[od, od]
-# 
-# # order_hm <- Heatmap(mat,
-# #                     cluster_rows = TRUE,
-# #                     cluster_columns = TRUE)
-# # od <- colnames(mat)[column_order(order_hm)]
-# # 
-# # mat = mat[od, od]
-# # mat2 = mat2[od, od]
-# 
-# # agg <- unique(m2[, c("site", "morphid2",'national2')]) # create aggregated df of pop_largeecies and site
-# agg <- unique(m2[, c("site")]) # create aggregated df of pop_largeecies and site
-# 
-# mat2 <- merge(mat2, agg, by.x=0, by.y="site", all.y=FALSE) #add aggregated df to mat2 (fst)
-# rownames(mat2) <- mat2$Row.names
-# 
-# mat2$Row.names <- NULL
-# mat2 <- mat2[match(colnames(mat2)[1:nrow(mat2)],rownames(mat2)),]
-# 
-# row_group_ann <- rowAnnotation(Morphotype = mat2$morphid2,
-#                                col=list(Morphotype=morphid_colours),
-#                                na_col="white",
-#                                annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
-#                                                               title_gp=gpar(fontsize=10)),
-#                                annotation_name_gp = gpar(fontsize = 0),
-#                                annotation_name_side="top")
-# 
-# 
-# 
-# bottom_group_ann <- HeatmapAnnotation(Morphotype = mat2$morphid2, col = list(Morphotype = morphid_colours),
-#                                       annotation_name_gp = gpar(fontsize = 0),
-#                                       annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
-#                                                                      title_gp=gpar(fontsize=10)),
-#                                       annotation_name_side="left",
-#                                       na_col = "white")
-# 
-# 
-# 
+
+# agg <- unique(m2[, c("site_cluster", "cluster",'national2')]) # create aggregated df of pop_largeecies and site_cluster
+agg <- unique(m2[, c("site_cluster",'cluster')]) # create aggregated df of pop_largeecies and site_cluster
+
+mat2 <- merge(mat2, agg, by.x=0, by.y="site_cluster", all.y=FALSE) #add aggregated df to mat2 (fst)
+rownames(mat2) <- mat2$Row.names
+
+mat2$Row.names <- NULL
+mat2 <- mat2[match(colnames(mat2)[1:nrow(mat2)],rownames(mat2)),]
+
+row_group_ann <- rowAnnotation(`HBDSCAN Cluster` = mat2$cluster,
+                               col=list(`HBDSCAN Cluster`=tsne_cols2),
+                               na_col="white",
+                               annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
+                                                              title_gp=gpar(fontsize=10)),
+                               annotation_name_gp = gpar(fontsize = 0),
+                               annotation_name_side="top")
+
+
+
+bottom_group_ann <- HeatmapAnnotation(`HBDSCAN Cluster` = mat2$cluster, col = list(`HBDSCAN Cluster` = tsne_cols2),
+                                      annotation_name_gp = gpar(fontsize = 0),
+                                      annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
+                                                                     title_gp=gpar(fontsize=10)),
+                                      annotation_name_side="left",
+                                      na_col = "white")
+
+
+
 # row_group_ann2 <- rowAnnotation(Country = mat2$national2,
 #                                 col=list(Country=nation_colours),
 #                                 na_col="white",
@@ -574,73 +557,74 @@ ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 
 #                                                                       title_gp=gpar(fontsize=10)),
 #                                        annotation_name_side="left",
 #                                        na_col = "white")
-# 
-# # specify fst heatmap colours 
-# gene_col <-  colorRamp2(c(0,0.5,1), c("#8DD3C7", "white", "#FB8072"))
-# 
-# 
-# #specify geo heatmap colours
-# palette <-  colorRamp2(c(0, max(mat, na.rm=TRUE)), c("white", "#80B1D3"))
-# 
-# geo <- Heatmap(mat,rect_gp = gpar(type = "none"),
-#                width = nrow(mat)*unit(6, "mm"),
-#                height = nrow(mat)*unit(6, "mm"),
-#                col=palette,na_col="white",
-#                # bottom_annotation = c(bottom_group_ann),
-#                row_names_gp = gpar(fontsize = 8, fontface="italic"),
-#                column_names_gp = gpar(fontsize = 8),
-#                cluster_rows = FALSE,
-#                cluster_columns = FALSE,
-#                name="Distance (km)",
-#                heatmap_legend_param = list(title_gp = gpar(fontsize = 10),
-#                                            labels_gp = gpar(fontsize = 8)),
-#                # cluster_rows = TRUE, 
-#                # cluster_columns = TRUE,
-#                cell_fun = function(j, i, x, y, w, h, fill) {
-#                  if(i >= j) {
-#                    grid.rect(x, y, w, h, gp = gpar(fill = fill, col = fill))
-#                    grid.text(sprintf("%.f", mat[,1:nrow(mat)][i, j]), x, y, gp = gpar(fontsize = 6))
-#                  }
-#                }
-# )
-# 
-# # make fst heatmap
-# gene <- Heatmap(as.matrix(mat2[,1:nrow(mat2)]), rect_gp = gpar(type = "none"),
-#                 width = nrow(mat2)*unit(6, "mm"),
-#                 height = nrow(mat2)*unit(6, "mm"),
-#                 # right_annotation = row_group_ann,
-#                 col=gene_col,na_col="grey",
-#                 row_names_gp = gpar(fontsize = 8),
-#                 column_names_gp = gpar(fontsize = 0),
-#                 border_gp = gpar(col = "black", lty = 1),
-#                 name="FST",
-#                 cluster_rows = FALSE,
-#                 cluster_columns = FALSE,
-#                 heatmap_legend_param = list(title_gp = gpar(fontsize = 10),
-#                                             labels_gp = gpar(fontsize = 8)),
-#                 cell_fun = function(j, i, x, y, w, h, fill) {
-#                   if(i <= j) {
-#                     grid.rect(x, y, w, h, gp = gpar(fill = fill, col = fill))
-#                     grid.text(sprintf("%.2f", mat2[,1:nrow(mat2)][i, j]), x, y, gp = gpar(fontsize = 6))
-#                   }
-#                 })
-# 
-# gene_width <- nrow(mat2)*unit(6, "mm")
-# 
-# draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
-# 
-# # Set the file name and parameters
-# filename <- "LantCama/outputs/LantCama_fst_plot.pdf"
-# width <- ncol(mat) * 0.28
-# height <- ncol(mat) * 0.28
-# dpi <- 300
-# units <- "cm"
-# 
-# # Set up the PNG device
-# pdf(filename, width = width, height = height)
-# 
-# # Draw the plot
-# draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
-# 
-# # Turn off the PNG device
-# dev.off()
+
+# specify fst heatmap colours
+gene_col <-  colorRamp2(c(0,0.5,1), c("#8DD3C7", "white", "#FB8072"))
+
+
+#specify geo heatmap colours
+palette <-  colorRamp2(c(0, max(mat, na.rm=TRUE)), c("white", "#80B1D3"))
+
+geo <- Heatmap(mat,rect_gp = gpar(type = "none"),
+               width = nrow(mat)*unit(6, "mm"),
+               height = nrow(mat)*unit(6, "mm"),
+               col=palette,na_col="white",
+               bottom_annotation = c(bottom_group_ann),
+               row_names_gp = gpar(fontsize = 8, fontface="italic"),
+               column_names_gp = gpar(fontsize = 8),
+               cluster_rows = FALSE,
+               cluster_columns = FALSE,
+               name="Distance (km)",
+               heatmap_legend_param = list(title_gp = gpar(fontsize = 10),
+                                           labels_gp = gpar(fontsize = 8)),
+               # cluster_rows = TRUE,
+               # cluster_columns = TRUE,
+               cell_fun = function(j, i, x, y, w, h, fill) {
+                 if(i >= j) {
+                   grid.rect(x, y, w, h, gp = gpar(fill = fill, col = fill))
+                   grid.text(sprintf("%.f", mat[,1:nrow(mat)][i, j]), x, y, gp = gpar(fontsize = 6))
+                 }
+               }
+)
+
+# make fst heatmap
+gene <- Heatmap(as.matrix(mat2[,1:nrow(mat2)]), rect_gp = gpar(type = "none"),
+                width = nrow(mat2)*unit(6, "mm"),
+                height = nrow(mat2)*unit(6, "mm"),
+                right_annotation = row_group_ann,
+                col=gene_col,na_col="grey",
+                row_names_gp = gpar(fontsize = 8),
+                column_names_gp = gpar(fontsize = 0),
+                border_gp = gpar(col = "black", lty = 1),
+                name="FST",
+                cluster_rows = FALSE,
+                cluster_columns = FALSE,
+                heatmap_legend_param = list(title_gp = gpar(fontsize = 10),
+                                            labels_gp = gpar(fontsize = 8)),
+                cell_fun = function(j, i, x, y, w, h, fill) {
+                  if(i <= j) {
+                    grid.rect(x, y, w, h, gp = gpar(fill = fill, col = fill))
+                    grid.text(sprintf("%.2f", mat2[,1:nrow(mat2)][i, j]), x, y, gp = gpar(fontsize = 6))
+                  }
+                }
+                )
+
+gene_width <- nrow(mat2)*unit(6, "mm")
+
+draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
+
+# Set the file name and parameters
+filename <- "LantCama/outputs/LantCama_fst_plot.pdf"
+width <- ncol(mat) * 0.28
+height <- ncol(mat) * 0.28
+dpi <- 300
+units <- "cm"
+
+# Set up the PNG device
+pdf(filename, width = width, height = height)
+
+# Draw the plot
+draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
+
+# Turn off the PNG device
+dev.off()
