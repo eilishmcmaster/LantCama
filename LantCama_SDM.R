@@ -3,10 +3,10 @@ library(raster)
 library(dismo)
 library(sp)
 library(sf)
+library(biomod2)
+library(geodata)
 
 # rarify to 5 km to prevent issues like overfitting and inaccurate inflation of model outcomes arising from spatial autocorrelation
-
-adhikari_2024_bioclim <- c('Bio1','Bio2','Bio3','Bio12','Bio13','Bio14','Biome') #use these variables
 # . Species distribution modeling of L. camara with RF was performed using the Biomod2 package, version 4.2–4 (Thuiller et al., 2023). 
 # future scenarios SSP2–4.5 and SSP5–8.5 
 
@@ -32,15 +32,7 @@ occurrence_thinned_sf <- occurrence_sf %>%
   distinct(long_rounded, lat_rounded, .keep_all = TRUE) %>%
   st_transform(crs = 4326)
 
-# # If you want to convert back to a data frame for further use
-# df_occurrence_thinned <- st_drop_geometry(occurrence_thinned_sf)
-# 
-# plot(occurrence_thinned_sf)
-
 ##
-library(biomod2)
-library(geodata)
-library(raster)
 
 # Download current climate data for Australia using WorldClim
 bio_curr <- geodata::worldclim_country('Australia', var = 'bio', res = 5, path = 'worldclim/', download = FALSE)
@@ -58,7 +50,6 @@ colnames(occurrence_data) <- c('longitude','latitude')
 coordinates(occurrence_data) <- ~longitude + latitude
 proj4string(occurrence_data) <- CRS("+proj=longlat +datum=WGS84")
 
-
 # Define the model options and training data
 biomod_data <- biomod2::BIOMOD_FormatingData(
   resp.var = occurrence_data,
@@ -68,7 +59,6 @@ biomod_data <- biomod2::BIOMOD_FormatingData(
   PA.nb.rep = 1,
   PA.strategy = 'random'
 )
-
 
 # Run the SDM model
 biomod_model <- biomod2::BIOMOD_Modeling(
@@ -82,8 +72,6 @@ biomod_model <- biomod2::BIOMOD_Modeling(
   seed.val = 42)
 
 
-biomod_model
-
 # Get evaluation scores & variables importance
 get_evaluations(biomod_model)
 get_variables_importance(biomod_model)
@@ -94,7 +82,6 @@ occurrence_predictions <- BIOMOD_Projection(
   new.env = bio_curr_selected,  # Current climate data
   proj.name = 'Current_Predictions'
 )
-
 
 predicted_rasters <- get_predictions(occurrence_predictions)
 
@@ -119,3 +106,55 @@ ggplot() +
              size = 0.5) +
   labs(title = "Predicted Occurrence of Cluster A (PER)", 
        fill = "Suitability")
+
+thomas2006 <- read.xlsx('LantCama/meta/Thomas2006_Lantana_flower_data.xlsx')
+
+thomas2006_2 <- thomas2006[thomas2006$morphid %in% c('pink'),]
+
+ggplot() +
+  tidyterra::geom_spatraster(data = australia_raster) +
+  scale_fill_gradientn(colors = rev(terrain.colors(100)), limits = c(0, 1), na.value = 'lightblue') +  # Use the inverted color scheme
+  theme_few() +
+  scale_x_continuous(limits=c(112.5, 155), expand = c(0, 0)) +
+  scale_y_continuous(limits=c(-45, -10), expand = c(0, 0)) +
+  geom_sf(data = ozmaps::ozmap_states, fill = NA, color = "black", size = 0.5) +  # Add state outlines
+  geom_point(data = thomas2006_2, 
+             mapping = aes(x = long, y = lat, 
+                           shape = as.factor(Rating), 
+                           color = as.factor(Rating)), 
+             size = 2) +  # Adjust the size if necessary
+  scale_shape_manual(values = c(4, 3, 3, 3)) + # 4 = cross for 0, 3 = tick for 1, 2, 3
+  scale_color_manual(values = c(`0`="red", `3`="green", `2`="yellow", `1`="orange")) +
+  labs(title = "Predicted Occurrence of Cluster A (PER)", 
+       fill = "Suitability",
+       shape = "Rating", 
+       color = "Rating") +
+  theme(legend.position = "bottom")
+
+
+ggplot() +
+  tidyterra::geom_spatraster(data = australia_raster) +
+  scale_fill_gradient2(low="white", mid="blue", high="darkblue", midpoint=0.5,limits = c(0, 1), na.value = 'lightblue') +
+  # scale_fill_gradientn(colors = rev(terrain.colors(100)), limits = c(0, 1), na.value = 'lightblue') +  # Use the inverted color scheme
+  theme_few() +
+  scale_x_continuous(limits=c(140, 155), expand = c(0, 0), labels = scales::number_format(accuracy = 1)) +
+  scale_y_continuous(limits=c(-45, -10), expand = c(0, 0), labels = scales::number_format(accuracy = 1)) +
+  geom_sf(data = ozmaps::ozmap_states, fill = NA, color = "black", size = 0.5) +  # Add state outlines
+  geom_point(data = thomas2006_2, 
+             mapping = aes(x = long, y = lat),
+             size = 1.7) +  # Adjust the size if necessary
+  geom_point(data = thomas2006_2, 
+             mapping = aes(x = long, y = lat, 
+                           shape = as.factor(Rating), 
+                           color = as.factor(Rating)), 
+             size = 1.5) +  # Adjust the size if necessary
+  scale_shape_manual(values = c(20, 20, 20,20)) + # 4 = cross for 0, 3 = tick for 1, 2, 3
+  scale_color_manual(values = c(`0`="red", `3`="green", `2`="yellow", `1`="orange")) +
+  labs(title = "Predicted Occurrence of Cluster A (pink)", 
+       fill = "SDM suitability",
+       shape = "Susceptibility\nrating", 
+       color = "Susceptibility\nrating",) +
+  theme(legend.position = "right", 
+        axis.title = element_blank())+
+  coord_sf(datum=4326)
+
