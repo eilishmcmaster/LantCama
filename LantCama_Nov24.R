@@ -69,7 +69,7 @@ svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
 
 
 ### PCA  ################################################################################
-dms_maf2 <- remove.by.maf(dms, 0.05)
+dms_maf2 <- remove.by.maf(dms, 0.02)
 length(dms_maf2$locus_names)
 
 gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
@@ -315,14 +315,14 @@ dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "
 m2$cluster <- hdb_df2$cluster[match(m2$sample,hdb_df2$sample)] %>% as.vector()
 m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("(",m2$cluster,")")))
 # ### LEA ####
-# # 
-# library(LEA)
-# 
-# nd_lea <- dart2lea(dms, RandRbase, species, dataset)
-# kvalrange <- 1:20
-# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
-# 
-# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+#
+library(LEA)
+
+nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+kvalrange <- 1:20
+snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
+
+save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 # # #
 load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 
@@ -539,25 +539,6 @@ bottom_group_ann <- HeatmapAnnotation(`HBDSCAN Cluster` = mat2$cluster, col = li
                                       annotation_name_side="left",
                                       na_col = "white")
 
-
-
-# row_group_ann2 <- rowAnnotation(Country = mat2$national2,
-#                                 col=list(Country=nation_colours),
-#                                 na_col="white",
-#                                 annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
-#                                                                title_gp=gpar(fontsize=10)),
-#                                 annotation_name_gp = gpar(fontsize = 0),
-#                                 annotation_name_side="top")
-# 
-# 
-# 
-# bottom_group_ann2 <- HeatmapAnnotation(Country = mat2$national2, col = list(Country = nation_colours),
-#                                        annotation_name_gp = gpar(fontsize = 0),
-#                                        annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
-#                                                                       title_gp=gpar(fontsize=10)),
-#                                        annotation_name_side="left",
-#                                        na_col = "white")
-
 # specify fst heatmap colours
 gene_col <-  colorRamp2(c(0,0.5,1), c("#8DD3C7", "white", "#FB8072"))
 
@@ -628,3 +609,9 @@ draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
 
 # Turn off the PNG device
 dev.off()
+
+####
+
+ind_ho <- fastDiversity::individual_Ho(dms, genetic_group_var=NULL, maf=0.02, max_missingness = 1)
+
+ggplot()
