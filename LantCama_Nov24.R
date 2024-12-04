@@ -310,12 +310,12 @@ ggsave('LantCama/outputs/Figure1_combined_plots.pdf', combined_plots, width = 34
 
 # add clusters to DMS
 dms$meta$cluster <- hdb_df2$cluster[match(dms$sample_names, hdb_df2$sample)] %>% as.vector()
-dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "", paste0("_",dms$meta$cluster)))
+dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "", paste0("(",dms$meta$cluster,")")))
 
 m2$cluster <- hdb_df2$cluster[match(m2$sample,hdb_df2$sample)] %>% as.vector()
-m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("_",m2$cluster)))
+m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("(",m2$cluster,")")))
 # ### LEA ####
-# 
+# # 
 # library(LEA)
 # 
 # nd_lea <- dart2lea(dms, RandRbase, species, dataset)
@@ -323,7 +323,7 @@ m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("_",m2$c
 # snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
 # 
 # save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
-# # # #
+# # #
 load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 
 K_chosen <- 5
@@ -437,7 +437,7 @@ ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 
 ### FST ###
 # remove site_clusters where n=4
 sppop_freq <- as.data.frame(table(dms$meta$site_cluster))
-not_n1_site_clusters <- as.vector(sppop_freq[sppop_freq$Freq<3,1]) #remove groups where n<=1
+not_n1_site_clusters <- as.vector(sppop_freq[sppop_freq$Freq<5,1]) #remove groups where n<=1
 not_n1_samples <- dms$sample_names[which(!(dms$meta$site_cluster %in% not_n1_site_clusters)& !is.na(dms$meta$site_cluster))]
 fst_dms <- remove.by.list(dms, not_n1_samples)
 
@@ -478,7 +478,7 @@ fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_cluster))+geom_poi
   labs(x="Distance (km)", y="FST", colour="Comparison")+
   # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
   theme_bw()+
-  geom_hline(yintercept = 0.4, linetype="dotted")+
+  # geom_hline(yintercept = 0.4, linetype="dotted")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
 fstp1
 
@@ -525,7 +525,7 @@ mat2 <- mat2[match(colnames(mat2)[1:nrow(mat2)],rownames(mat2)),]
 row_group_ann <- rowAnnotation(`HBDSCAN Cluster` = mat2$cluster,
                                col=list(`HBDSCAN Cluster`=tsne_cols2),
                                na_col="white",
-                               annotation_legend_param = list(labels_gp=gpar(fontface="italic",fontsize=8),
+                               annotation_legend_param = list(labels_gp=gpar(fontsize=8),
                                                               title_gp=gpar(fontsize=10)),
                                annotation_name_gp = gpar(fontsize = 0),
                                annotation_name_side="top")
@@ -534,7 +534,7 @@ row_group_ann <- rowAnnotation(`HBDSCAN Cluster` = mat2$cluster,
 
 bottom_group_ann <- HeatmapAnnotation(`HBDSCAN Cluster` = mat2$cluster, col = list(`HBDSCAN Cluster` = tsne_cols2),
                                       annotation_name_gp = gpar(fontsize = 0),
-                                      annotation_legend_param = list(labels_gp=gpar(fontface="italic", fontsize=8),
+                                      annotation_legend_param = list(labels_gp=gpar(fontsize=8),
                                                                      title_gp=gpar(fontsize=10)),
                                       annotation_name_side="left",
                                       na_col = "white")
