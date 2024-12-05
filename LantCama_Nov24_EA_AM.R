@@ -77,8 +77,14 @@ tsne_cols <- c("white", tsne_cols)
 names(tsne_cols) <- c(NA, unique(m2$cluster[!is.na(m2$cluster)]))
 tsne_cols2 <- tsne_cols[!is.na(names(tsne_cols))]
 
+
+custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),
+                               legend.title = element_text(size = 10),
+                               legend.text = element_text(size = 8))
+
 #### splitstree ####
 dms_maf2 <- remove.by.maf(dms, 0.02)
+length(dms_maf2$locus_names)
 # splitstree(dist(dms_maf2$gt, method = "euclidean"), 'LantCama/outputs/20241205_all_LantCama_nexus_file_for_R_80missing_maf2.nex')
 
 library(tanggle)
@@ -92,21 +98,21 @@ library(ggforce)
 Nnet <- phangorn::read.nexus.networx('LantCama/outputs/20241205_all_LantCama_nexus_file_for_R_80missing_maf2.nex')
 
 
-x <- data.frame(x=Nnet$.plot$vertices[,1], y=Nnet$.plot$vertices[,2], 
+splitstree <- data.frame(x=Nnet$.plot$vertices[,1], y=Nnet$.plot$vertices[,2], 
                 sample=rep(NA, nrow(Nnet$.plot$vertices)))
 
-x[Nnet$translate$node,"sample"] <- Nnet$translate$label
-x <- merge(x, m2, by="sample", all.x=TRUE, all.y=FALSE)
-x$cluster[!is.na(x$sample)&is.na(x$cluster)] <- "ungrouped"
+splitstree[Nnet$translate$node,"sample"] <- Nnet$translate$label
+splitstree <- merge(splitstree, m2, by="sample", all.x=TRUE, all.y=FALSE)
+splitstree$cluster[!is.na(splitstree$sample)&is.na(splitstree$cluster)] <- "ungrouped"
 # 
-net_x_axis <- max(x$x)-min(x$x)
-net_y_axis <- max(x$y)-min(x$y)
+net_x_axis <- max(splitstree$x)-min(splitstree$x)
+net_y_axis <- max(splitstree$y)-min(splitstree$y)
 
 
 levels2 <- unique(dms$meta$analyses[,"national2"]) %>% sort()
 levels2_shapes <- setNames(1:nlevels(factor(levels2)), levels2)
 
-hull <- x %>% group_by(cluster) %>%
+hull <- splitstree %>% group_by(cluster) %>%
   slice(chull(x, y))
 hull <- hull[!hull$cluster=='ungrouped',]
 
@@ -116,7 +122,7 @@ morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCE
 
 
 # Create hull data
-hull <- x %>%
+hull <- splitstree %>%
   group_by(cluster) %>%
   slice(chull(x, y)) %>%
   filter(!cluster == "ungrouped")  # Exclude ungrouped clusters
@@ -137,7 +143,7 @@ labels <- hull %>%
 # Add labels to the plot
 splitstree_plot <- ggplot(Nnet, aes(x = x, y = y)) +
   geom_splitnet(layout = "slanted", size = 0.2) +
-  scale_fill_manual(values = tsne_cols, na.translate = FALSE) +
+  # scale_fill_manual(values = tsne_cols, na.translate = FALSE) +
   scale_colour_manual(values = morphid_colours, na.translate = FALSE) +
   theme_void() +
   expand_limits(x = c(min(x_filtered$x) - 0.01 * net_x_axis, max(x_filtered$x) + 0.1 * net_x_axis),
@@ -149,11 +155,12 @@ splitstree_plot <- ggplot(Nnet, aes(x = x, y = y)) +
   guides(colour = guide_legend(title.position = "top", nrow = 2, override.aes = list(fill = NA, linetype = 0)), 
          fill = guide_legend(title.position = "top", nrow = 2, override.aes = list(color = NA)),
          shape = guide_legend(title.position = "top", nrow = 2))+
-  geom_shape(data = hull, alpha = 0.7, expand = 0.015, radius = 0.015,
-             aes(fill = cluster), color = "white", show.legend = FALSE) +
+  geom_shape(data = hull, alpha = 0.3, expand = 0.015, radius = 0.015,
+             aes(group=cluster),fill='black', color = "white", show.legend = FALSE) + #aes(fill = cluster)
   geom_point(data = x_filtered, aes(shape = national2), color = "white", size = 2) +
   geom_point(data = x_filtered, aes(color = morphid2, shape = national2)) +
-  geom_text_repel(data = labels, aes(label = cluster), size = 4, nudge_y=0.001, nudge_x=0.001)
+  geom_text_repel(data = labels, aes(label = cluster), size = 4, nudge_y=0.001, nudge_x=0.001)+
+  custom_legend_theme
 
 splitstree_plot
 
@@ -165,26 +172,26 @@ ggsave("LantCama/outputs/LantCama_splitstree_HDBSCAN_clusters_80miss_maf2.png",
        splitstree_plot, width = 20, height = 20, units = "cm", dpi = 600)
 
 
-### UPGMA ###
-# write input 
-# for iqtree and mrbayes
-dart2svdquartets(dms_maf2, RandRbase, species, dataset, add_pop=TRUE, pop=dms_maf2$sample_names)
-
-# read what we just wrote
-genotype_matrix <- read.nexus.data('/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen/raw_SNPFilt_1SNPperClone/svdq/LantCama_DLan23-8067.nex')
-
-x <- nexus2DNAbin(genotype_matrix)
-x2 <- as.phyDat(x)
-
-dm <- dist.hamming(x2)
-tree <- upgma(dm)
-# NJ# NJupgma()
-set.seed(123)
-UPGMAtrees <- bootstrap.phyDat(x2,
-                               FUN=function(x)upgma(dist.hamming(x)), bs=1000)
-treeUPGMA <- plotBS(tree, UPGMAtrees, "phylogram")
-
-write.tree(treeUPGMA, file='treeUPGMA.tree')
+### UPGMA #################
+# # write input
+# # for iqtree and mrbayes
+# dart2svdquartets(dms_maf2, RandRbase, species, dataset, add_pop=TRUE, pop=dms_maf2$sample_names)
+# 
+# # read what we just wrote
+# genotype_matrix <- read.nexus.data('/Users/eilishmcmaster/Documents/LantCama/LantCama/popgen/raw_SNPFilt_1SNPperClone/svdq/LantCama_DLan23-8067.nex')
+# 
+# x <- nexus2DNAbin(genotype_matrix)
+# x2 <- as.phyDat(x)
+# 
+# dm <- dist.hamming(x2)
+# tree <- upgma(dm)
+# # NJ# NJupgma()
+# set.seed(123)
+# UPGMAtrees <- bootstrap.phyDat(x2,
+#                                FUN=function(x)upgma(dist.hamming(x)), bs=10000)
+# treeUPGMA <- plotBS(tree, UPGMAtrees, "phylogram")
+# 
+# write.tree(treeUPGMA, file='treeUPGMA.tree')
 
 #### read in tree ####
 
@@ -198,7 +205,6 @@ nation_colours <- named_list_maker(x1$national2, 'Paired',11)
 #### plot tree ####
 ##### full tree ####
 
-
 ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1 
 
 hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2')]),#'svdq_pop_label',
@@ -209,16 +215,14 @@ hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2')])
   theme_tree2() +
   geom_tiplab(aes(label = label), size=0.8) +
   geom_rootedge(0.0005, size=0.3)+
-  # geom_label2(data=upgma, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
+  geom_label2(data=upgma, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
   # geom_label2(data=upgma, aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
-  #             color='red', nudge_x = 0.0004, label.size=0, fill="transparent", size=2) +
-  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
-  geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
+  #             color='red', nudge_x = 0.0003, label.size=0, fill="transparent", size=2) +
+  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))
+  # geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
 
+hmt
 
-custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),
-                               legend.title = element_text(size = 8),
-                               legend.text = element_text(size = 6))
 # Create separate ggplots for each fill scheme
 plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=clusters)) +
   geom_tile() +
@@ -249,7 +253,8 @@ legend_morphid2 <- cowplot::get_legend(plot_morphid2)
 
 
 
-legends <- cowplot::plot_grid(legend_prob, legend_svdq_pop,legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 5/1) # Adjust aspect 
+legends <- cowplot::plot_grid(legend_svdq_pop,legend_morphid2, legend_national2, ncol=1, align="hv") + 
+  theme(aspect.ratio = 5/1) # Adjust aspect #legend_prob
 legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 3/1) # Adjust aspect 
 
 
@@ -261,3 +266,90 @@ ggsave("LantCama/outputs/LantCama_upgma_maf2.pdf",
 
 ggsave("LantCama/outputs/LantCama_upgma_maf2.png",
        combined_plot, width = 25, height = 40, units = "cm", dpi=300)
+
+#### collapsed UPGMA ####
+library(ggtree)
+library(ggplot2)
+library(ape)
+library(openxlsx)
+library(tidytree)
+library(RColorBrewer)
+
+nodes.to.collapse <- c(1030, 1050, 904,953,825,554,673)
+
+nodes.identity <- rev(c("D", "A", "C", "B", "F", "E", "G"))
+
+names(nodes.identity) <- nodes.to.collapse
+
+
+# Scale clade function proportional to the number of samples
+scaleMyClade <- function(.p, .node) {
+  offs <- offspring(.p$data, .node)
+  num_samples <- nrow(offs)
+  scaling_factor <- 1 / (log10(num_samples) + 1) # Adjust the scaling factor as needed
+  scaleClade(.p, .node, scaling_factor)
+}
+
+
+# Collapse clade function with labels and colors
+collapseMyClade <- function(.p, .node) {
+  label <- nodes.identity[as.character(.node)]
+  fill_color <- tsne_cols[label]
+  .p <- collapse(.p, .node, "max",  fill = fill_color, color="black", size=0.3)
+  .p <- .p + geom_cladelabel(node = .node,align = TRUE, vjust=-0.02,offset.text=-0.0005, label = label,
+                             fontsize = 2)
+  return(.p)
+}
+
+
+# Apply scaling and collapsing to the nodes
+ggtree_obj2 <- Reduce(scaleMyClade, nodes.to.collapse, ggtree_obj)
+ggtree_obj2 <- Reduce(collapseMyClade, nodes.to.collapse, ggtree_obj2)
+
+gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),
+         offset = 0.001, width = .1, font.size = 2,
+         colnames_position = "top")
+         # custom_column_labels = c('Morphotype', "Country"))
+  # theme(legend.position = "none", plot.margin = margin(3, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
+  # coord_cartesian(clip = "off")
+
+# Add gheatmap and additional layers as required
+hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),#'svdq_pop_label',
+                 offset = 0.001, width = .1, font.size = 10,
+                 colnames_angle = 90, colnames_position = "top",
+                 custom_column_labels = c('Morphotype', "Country"), hjust = 0) +
+  scale_fill_manual(values = c(nation_colours, morphid_colours), na.value = "white") +
+  theme_tree2() +
+  geom_tiplab(aes(label = label), size = 0.8) +
+  geom_rootedge(0.0005, size = 0.3) +
+  theme(legend.position = "none", plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
+  geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
+              color='red', nudge_x = -0.0003,nudge_y=1.1, label.size=0, fill="transparent", size=1.5)
+# geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
+
+# Plot the final tree
+hmt2
+
+combined_plot2 <- cowplot::plot_grid(hmt2, legends2,nrow = 1, rel_widths = c(1, 0.2))
+
+g1 <- combined_plot2
+g2 <- splitstree_plot
+# Convert g2 into a grob
+g2_grob <- ggplotGrob(g2)
+
+# Overlay g2 on g1 using annotation_custom
+g1_with_g2 <- g1 +
+  annotation_custom(
+    grob = g2_grob,
+    xmin = 0, xmax = 0.6, # Adjust coordinates as needed
+    ymin = 0.5, ymax = 1   # Adjust coordinates as needed
+  )
+
+# Print the combined plot
+# g1_with_g2
+
+ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.pdf",
+       g1_with_g2, width = 20, height = 30, units = "cm", dpi=600)
+
+ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.png",
+       g1_with_g2, width = 25, height = 30, units = "cm", dpi=300)

@@ -232,13 +232,13 @@ tsne_cols2 <- tsne_cols[!is.na(names(tsne_cols))]
 
 # Create row and column annotations
 row_anno <- rowAnnotation(
-  cluster = as.factor(d_matrix2$cluster),
-  col = list(cluster = tsne_cols2),
+  `HDBSCAN Cluster` = as.factor(d_matrix2$cluster),
+  col = list(`HDBSCAN Cluster` = tsne_cols2),
   annotation_legend_param = list(
-    cluster = list(title = "HDBSCAN Cluster")
+    `HDBSCAN Cluster` = list(title = "HDBSCAN Cluster")
   ),
-  
-  annotation_name_gp = gpar(fontsize = 0),
+  annotation_name_side = "top",
+  annotation_name_gp = gpar(fontsize = 10),
   na_col = "white"
   )
 
@@ -248,7 +248,8 @@ row_anno2 <- rowAnnotation(
   annotation_legend_param = list(
     Morphotype = list(title = "Morphotype")
   ),
-  annotation_name_gp = gpar(fontsize = 0)
+  annotation_name_side = "top",
+  annotation_name_gp = gpar(fontsize = 10)
 )
 
 row_anno3 <- rowAnnotation(
@@ -259,7 +260,8 @@ row_anno3 <- rowAnnotation(
       c("red", "white", "blue")
     )
   ),
-  annotation_name_gp = gpar(fontsize = 0)
+  annotation_name_side = "top",
+  annotation_name_gp = gpar(fontsize = 10)
 )
 
 col_anno <- HeatmapAnnotation(
@@ -268,6 +270,7 @@ col_anno <- HeatmapAnnotation(
   annotation_legend_param = list(
     cluster = list(title = "HDBSCAN Cluster")
   ),
+  show_legend = FALSE,
   annotation_name_gp = gpar(fontsize = 0),
   na_col = "white"
   )
@@ -363,11 +366,11 @@ main_plot <- ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = factor(l
     axis.text = element_blank(),
     axis.title.x = element_blank(),
     axis.ticks.x = element_blank(),  # Remove axis ticks
-    panel.spacing = unit(0, "lines")
-    # plot.margin = margin(2, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+    panel.spacing = unit(0, "lines"),
+    plot.margin = margin(2, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
   ) +
   scale_y_continuous(limits = c(0, 1.001), expand = c(0, 0)) +
-  labs(x = "", y = "Ancestry Proportion", fill = "")
+  labs(y = "Ancestry Proportion", fill = "")
 
 
 
@@ -428,14 +431,15 @@ cluster_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = cluster)) +
 
 
 
-# combined_lea_plot <-ggarrange(main_plot,cluster_plot,morphotype_plot,lat_plot,
-#           nrow=4, 
-#           heights=c(1,0.15,0.15, 0.15),
-#           align="v", common.legend = TRUE, legend='right')
-combined_lea_plot <-ggarrange(main_plot,morphotype_plot,lat_plot,
-                              nrow=4, 
-                              heights=c(1,0.15,0.15, 0.15),
-                              align="v", common.legend = TRUE, legend='right')
+combined_lea_plot <- ggarrange(main_plot,cluster_plot,morphotype_plot,lat_plot,
+          nrow=4,
+          heights=c(1,0.1,0.1, 0.1),
+          align="v", common.legend = TRUE, legend='right')
+
+# combined_lea_plot <-ggarrange(main_plot,morphotype_plot,lat_plot,
+#                               nrow=4, 
+#                               heights=c(1,0.15,0.15, 0.15),
+#                               align="v", common.legend = TRUE, legend='right')
 
 combined_plots2 <- multi_panel_figure(
   width = c(7.5, 25),   # Adjust these dimensions as needed
