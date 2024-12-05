@@ -315,14 +315,14 @@ dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "
 m2$cluster <- hdb_df2$cluster[match(m2$sample,hdb_df2$sample)] %>% as.vector()
 m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("(",m2$cluster,")")))
 # ### LEA ####
-#
+# #
 library(LEA)
-
-nd_lea <- dart2lea(dms, RandRbase, species, dataset)
-kvalrange <- 1:20
-snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
-
-save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+# 
+# nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+# kvalrange <- 1:20
+# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
+# 
+# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 # # #
 load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 
@@ -363,8 +363,8 @@ main_plot <- ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = factor(l
     axis.text = element_blank(),
     axis.title.x = element_blank(),
     axis.ticks.x = element_blank(),  # Remove axis ticks
-    panel.spacing = unit(0, "lines"),
-    plot.margin = margin(2, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+    panel.spacing = unit(0, "lines")
+    # plot.margin = margin(2, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
   ) +
   scale_y_continuous(limits = c(0, 1.001), expand = c(0, 0)) +
   labs(x = "", y = "Ancestry Proportion", fill = "")
@@ -388,10 +388,27 @@ lat_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = lat)) +
     axis.title.y = element_text(size = 11, angle = 0, hjust = 1, vjust = 0.5),  # Add this to show the y-axis label
     legend.position = "none",
     panel.spacing = unit(0, "lines"),
-    strip.text = element_blank(),  # Remove facet panel text
-    plot.margin = margin(0, 2, 2, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+    panel.border = element_rect(color = "grey20", fill = NA, size = 0.5),  # Add panel border
+    strip.text = element_blank()  # Remove facet panel text
+    # plot.margin = margin(0, 2, 2, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
   )
 
+
+morphotype_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = morphid2)) +
+  geom_tile() +
+  scale_fill_manual(values=morphid_colours, na.value = "white")+
+  facet_grid(~cluster, scales = "free_x", space = "free_x") +
+  labs(fill = "", y="Morphotype") +
+  theme_void() +
+  scale_y_continuous(limits = c(0.5, 1.501), expand = c(0, 0)) +
+  theme(
+    axis.title.y = element_text(size = 11, angle = 0, hjust = 1, vjust = 0.5),  # Add this to show the y-axis label
+    legend.position = "none",
+    panel.spacing = unit(0, "lines"),
+    panel.border = element_rect(color = "grey20", fill = NA, size = 0.5),  # Add panel border
+    strip.text = element_blank()  # Remove facet panel text
+    # plot.margin = margin(0, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+  )
 
 cluster_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = cluster)) +
   geom_tile() +
@@ -404,17 +421,21 @@ cluster_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = cluster)) +
     axis.title.y = element_text(size = 11, angle = 0, hjust = 1, vjust = 0.5),  # Add this to show the y-axis label
     legend.position = "none",
     panel.spacing = unit(0, "lines"),
-    strip.text = element_blank(),  # Remove facet panel text
-    plot.margin = margin(0, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
+    panel.border = element_rect(color = "grey20", fill = NA, size = 0.5),  # Add panel border
+    strip.text = element_blank()  # Remove facet panel text
+    # plot.margin = margin(0, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
   )
 
 
 
-combined_lea_plot <-ggarrange(main_plot,cluster_plot,lat_plot,
-          nrow=3, 
-          heights=c(1,0.15,0.15),
-          align="v", common.legend = TRUE, legend='right')
-combined_lea_plot
+# combined_lea_plot <-ggarrange(main_plot,cluster_plot,morphotype_plot,lat_plot,
+#           nrow=4, 
+#           heights=c(1,0.15,0.15, 0.15),
+#           align="v", common.legend = TRUE, legend='right')
+combined_lea_plot <-ggarrange(main_plot,morphotype_plot,lat_plot,
+                              nrow=4, 
+                              heights=c(1,0.15,0.15, 0.15),
+                              align="v", common.legend = TRUE, legend='right')
 
 combined_plots2 <- multi_panel_figure(
   width = c(7.5, 25),   # Adjust these dimensions as needed
@@ -433,6 +454,7 @@ combined_plots2 %<>%
 
 
 ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 34, height = 30, units = "cm")
+ggsave('LantCama/outputs/Figure1_combined_plots2.png', combined_plots2, width = 34, height = 30,dpi=600, units = "cm")
 
 ### FST ###
 # remove site_clusters where n=4
@@ -612,6 +634,19 @@ dev.off()
 
 ####
 
-ind_ho <- fastDiversity::individual_Ho(dms, genetic_group_var=NULL, maf=0.02, max_missingness = 1)
+ind_ho <- fastDiversity::individual_Ho(dms$gt, genetic_group_var=NULL, maf=0.02, max_missingness = 1)
+m2$Ho <- ind_ho[match(m2$sample, names(ind_ho))]
+ho_plot <- ggplot(m2, aes(x=cluster, y=Ho, fill=cluster))+
+  geom_boxplot()+
+  scale_color_manual(values=tsne_cols2)+
+  theme_few()+
+  theme(legend.position = 'none')+
+  labs(x="HDBCAN cluster", y="Ho (MAF 2%)")
 
-ggplot()
+fst_ho_combined <- ggarrange(fstp1+theme(legend.position = 'bottom'), ho_plot, widths=c(1,0.8),
+                             # align='h',
+                             labels="AUTO", font.label = list(face = "plain"))
+
+fst_ho_combined
+
+ggsave('LantCama/outputs/Figure2_fst_ho.png',dpi = 600, fst_ho_combined, width = 20, height = 8, units = "cm")
