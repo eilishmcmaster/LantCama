@@ -48,7 +48,6 @@ d1        <- new.read.dart.xls.onerow(RandRbase,species,dataset,topskip, nmetava
 meta      <- read.meta.data.full.analyses.df(d1, basedir, species, dataset)
 
 d3        <- dart.meta.data.merge(d1, meta) 
-# EA_only <- c(meta$sample_names[which(meta$analyses[,'country'] %in% c('Australia (NSW)','Australia (QLD)'))])
 
 EA_only <- c(meta$sample_names[which(!is.na(meta$analyses[,'EA_only']))])
 
@@ -64,8 +63,6 @@ m2$lat <- as.numeric(m2$lat)
 m2$long <- as.numeric(m2$long)
 #### colours 
 morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
-svdq_pop_colours <- named_list_maker(m2$svdq_pop, 'Spectral', 11)
-svdq_pop_colours <- c(svdq_pop_colours, 'ungrouped'='grey30')
 
 
 ### PCA  ################################################################################
@@ -181,13 +178,15 @@ new_cluster_alphabetical <- LETTERS[1:length(hdb_cluster_unique)]
 hdb_df2$cluster <- new_cluster_alphabetical[match(hdb_df2$hdb_cluster, hdb_cluster_unique)]
 
 
-# 
-# tsne_cols <- c(rainbow(length(unique(hdb_df2$cluster))))
-# names(tsne_cols) <- unique(hdb_df2$cluster)
+
 n_clusters <- length(unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))  # Exclude NA from the count
-tsne_cols <- brewer.pal(n_clusters, "Paired")
-tsne_cols <- c("white", tsne_cols)
-names(tsne_cols) <- c(NA, unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))
+# tsne_cols <- brewer.pal(n_clusters, "Paired")
+# tsne_cols <- c("white", tsne_cols)
+# names(tsne_cols) <- c(NA, unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))
+
+tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
+                         "#FB9A99", "#E31A1C", "#FDBF6F"), names = c(NA, "A", "B", "C", 
+                                                                     "D", "E", "F", "G"))
 
 #### write_out_clusters ####
 out_cols <- c('sample','lat','long','site','site_original','morphid2','cluster')
@@ -235,7 +234,7 @@ row_anno <- rowAnnotation(
   `HDBSCAN Cluster` = as.factor(d_matrix2$cluster),
   col = list(`HDBSCAN Cluster` = tsne_cols2),
   annotation_legend_param = list(
-    `HDBSCAN Cluster` = list(title = "HDBSCAN Cluster")
+    `HDBSCAN Cluster` = list(title = "HDBSCAN\nCluster")
   ),
   annotation_name_side = "top",
   annotation_name_gp = gpar(fontsize = 10),
@@ -268,7 +267,7 @@ col_anno <- HeatmapAnnotation(
   cluster = as.factor(d_matrix2$cluster),
   col = list(cluster = tsne_cols2),
   annotation_legend_param = list(
-    cluster = list(title = "HDBSCAN Cluster")
+    cluster = list(title = "HDBSCAN\nCluster")
   ),
   show_legend = FALSE,
   annotation_name_gp = gpar(fontsize = 0),
@@ -279,6 +278,8 @@ col_anno <- HeatmapAnnotation(
 ht <- Heatmap(
   d_matrix2[,1:nrow(d_matrix2)] %>% as.matrix,
   name = "Distance",
+  show_row_dend = FALSE,
+  # show_column_dend = FALSE,
   clustering_method_columns = "average",
   clustering_method_rows = "average",
   clustering_distance_rows=d,
@@ -441,9 +442,30 @@ combined_lea_plot <- ggarrange(main_plot,cluster_plot,morphotype_plot,lat_plot,
 #                               heights=c(1,0.15,0.15, 0.15),
 #                               align="v", common.legend = TRUE, legend='right')
 
+# combined_plots2 <- multi_panel_figure(
+#   width = c(7.5, 25),   # Adjust these dimensions as needed
+#   height = c(7,7,7,6),
+#   unit = "cm",
+#   panel_label_type = "upper-roman"
+# )
+# 
+# # Fill the panels with the respective plots
+# combined_plots2 %<>%
+#   fill_panel(pca_plot1 + theme(legend.position = "none"), column = 1, row = 1, label = "A") %<>%
+#   fill_panel(tsne_plot2 + theme(legend.position = "none"), column = 1, row = 2, label = "B") %<>%
+#   fill_panel(tsne_plot1 + theme(legend.position = "none"), column = 1, row = 3, label = "C") %<>%
+#   fill_panel(draw(ht, merge_legends = TRUE), column = 2, row = 1:3, label = "D") %<>%
+#   fill_panel(combined_lea_plot, column = 1:2, row = 4, label = "E")
+# 
+# 
+# ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 34, height = 30, units = "cm")
+# ggsave('LantCama/outputs/Figure1_combined_plots2.png', combined_plots2, width = 34, height = 30,dpi=600, units = "cm")
+# 
+# ###
+
 combined_plots2 <- multi_panel_figure(
-  width = c(7.5, 25),   # Adjust these dimensions as needed
-  height = c(7,7,7,6),
+  width = c(6, 18),   # Adjust these dimensions as needed
+  height = c(5,5,5,5),
   unit = "cm",
   panel_label_type = "upper-roman"
 )
@@ -457,8 +479,9 @@ combined_plots2 %<>%
   fill_panel(combined_lea_plot, column = 1:2, row = 4, label = "E")
 
 
-ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 34, height = 30, units = "cm")
-ggsave('LantCama/outputs/Figure1_combined_plots2.png', combined_plots2, width = 34, height = 30,dpi=600, units = "cm")
+ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 25, height = 22.1, units = "cm")
+ggsave('LantCama/outputs/Figure1_combined_plots2.png', combined_plots2, width = 25, height = 22.1,dpi=600, units = "cm")
+
 
 ### FST ###
 # remove site_clusters where n=4
@@ -642,10 +665,10 @@ ind_ho <- fastDiversity::individual_Ho(dms$gt, genetic_group_var=NULL, maf=0.02,
 m2$Ho <- ind_ho[match(m2$sample, names(ind_ho))]
 ho_plot <- ggplot(m2, aes(x=cluster, y=Ho, fill=cluster))+
   geom_boxplot()+
-  scale_color_manual(values=tsne_cols2)+
+  scale_fill_manual(values=tsne_cols)+
   theme_few()+
   theme(legend.position = 'none')+
-  labs(x="HDBCAN cluster", y="Ho (MAF 2%)")
+  labs(x="HDBSCAN cluster", y="Ho (MAF 2%)")
 
 fst_ho_combined <- ggarrange(fstp1+theme(legend.position = 'bottom'), ho_plot, widths=c(1,0.8),
                              # align='h',
