@@ -676,3 +676,46 @@ fst_ho_combined <- ggarrange(fstp1+theme(legend.position = 'bottom'), ho_plot, w
 fst_ho_combined
 
 ggsave('LantCama/outputs/Figure2_fst_ho.png',dpi = 600, fst_ho_combined, width = 20, height = 8, units = "cm")
+
+
+####
+
+stat_site_cluster_maf0 <- fastDiversity::faststats(dms$gt %>% as.matrix(),
+                                              genetic_group_variable = rep("Lcamara", length(dms$sample_names)),
+                                              site_variable = dms$meta$site_cluster, 
+                                              maf=0, max_missingness = 1)
+
+stat_site_cluster_maf0 <- stat_site_cluster_maf0 %>%
+  rename_with(~ ifelse(.x == "site", .x, paste0(.x, "_maf_0")))
+
+stat_site_cluster_maf2 <- fastDiversity::faststats(dms$gt %>% as.matrix(),
+                                                   genetic_group_variable = rep("Lcamara", length(dms$sample_names)),
+                                                   site_variable = dms$meta$site_cluster, 
+                                                   maf=0.02, max_missingness = 1)
+
+stat_site_cluster_maf2 <- stat_site_cluster_maf2 %>%
+  rename_with(~ ifelse(.x == "site", .x, paste0(.x, "_maf_2")))
+
+library(dplyr)
+
+summary_m2 <- m2 %>%
+  group_by(site_cluster) %>%
+  reframe(
+    site = site,
+    site_long = paste(unique(site_original), collapse = ":"), # Colon-delimited site_original values
+    mean_lat = mean(lat, na.rm = TRUE),                      # Calculate mean latitude
+    mean_long = mean(long, na.rm = TRUE),                    # Calculate mean longitude
+    unique_clusters = paste(unique(cluster), collapse = ":"), # Colon-delimited cluster values
+    unique_morphid2 = paste(unique(morphid2), collapse = ":") # Colon-delimited morphid2 values
+  ) %>%
+  unique()
+
+
+stats_combined1 <- merge(summary_m2, stat_site_cluster_maf0, by.x="site_cluster", by.y="site")
+stats_combined2 <- merge(stats_combined1, stat_site_cluster_maf2, stat_site_cluster_maf0, by.x="site_cluster", by.y="site")
+cols_keep_stats <- c("site_cluster", "site","site_long", "mean_lat", "mean_long", "unique_clusters", 
+                     "unique_morphid2", "n_maf_2", "Ho_maf_0", "uHe_maf_0", "uFis_maf_0", "loci_maf_0", 
+                     "Ho_maf_2", "uHe_maf_2", "uFis_maf_2", "loci_maf_2"
+)
+stats_combined3 <- stats_combined2[,cols_keep_stats]
+write.xlsx(stats_combined3,'LantCama/outputs/LantCama_supp_table_divstats.xlsx')
