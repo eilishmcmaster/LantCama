@@ -472,11 +472,11 @@ combined_plots2 <- multi_panel_figure(
 
 # Fill the panels with the respective plots
 combined_plots2 %<>%
-  fill_panel(pca_plot1 + theme(legend.position = "none"), column = 1, row = 1, label = "A") %<>%
-  fill_panel(tsne_plot2 + theme(legend.position = "none"), column = 1, row = 2, label = "B") %<>%
-  fill_panel(tsne_plot1 + theme(legend.position = "none"), column = 1, row = 3, label = "C") %<>%
-  fill_panel(draw(ht, merge_legends = TRUE), column = 2, row = 1:3, label = "D") %<>%
-  fill_panel(combined_lea_plot, column = 1:2, row = 4, label = "E")
+  fill_panel(pca_plot1 + theme(legend.position = "none"), column = 1, row = 1, label = "a") %<>%
+  fill_panel(tsne_plot2 + theme(legend.position = "none"), column = 1, row = 2, label = "b") %<>%
+  fill_panel(tsne_plot1 + theme(legend.position = "none"), column = 1, row = 3, label = "c") %<>%
+  fill_panel(draw(ht, merge_legends = TRUE), column = 2, row = 1:3, label = "d") %<>%
+  fill_panel(combined_lea_plot, column = 1:2, row = 4, label = "e")
 
 
 ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 25, height = 22.1, units = "cm")
@@ -523,17 +523,16 @@ Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site_cluster","cluster")]), by.x="Va
 Fst_sig2$same_cluster <- ifelse(Fst_sig2$cluster.x == Fst_sig2$cluster.y, "Intra-cluster", "Inter-cluster")
 
 library(ggforce)
-fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_cluster))+geom_point(size=1, alpha=0.3)+
+fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_cluster))+
+  geom_point(size=1, alpha=0.3)+
   labs(x="Distance (km)", y="FST", colour="Comparison")+
-  # facet_zoom(x=Geo_dist2<25, zoom.size=1)+
   theme_bw()+
-  # geom_hline(yintercept = 0.4, linetype="dotted")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
 fstp1
 
 
-# ggsave("BossFrag/outputs/paper/supfig2_BossFrag_manning_fst.pdf",
-#        fstp1, width = 15, height = 15, units = "cm", dpi=600)
+ggsave('LantCama/outputs/Figure2_fst.png',dpi = 300, fstp1, width = 12, height = 8, units = "cm")
+ggsave('LantCama/outputs/Figure2_fst.pdf',dpi = 300, fstp1, width = 12, height = 8, units = "cm")
 
 paste("Mantel statistic r is", round(man$statistic, 3), ", P =", man$signif)
 
