@@ -171,7 +171,7 @@ splitstree_plot <- ggplot(Nnet, aes(x = x, y = y)) +
   # expand_limits(x = c(min(splitstree$x) - 0.01 * net_x_axis, max(splitstree$x) + 0.1 * net_x_axis),
   #               y = c(min(splitstree$y) - 0.01 * net_y_axis, max(splitstree$y) + 0.01 * net_y_axis)) +
   theme(legend.position = "right", legend.key = element_blank(),legend.justification = "top",
-        legend.key.size = unit(0, 'lines'), plot.margin = margin(5,5,5,5)) +
+        legend.key.size = unit(0, 'lines')) +#, plot.margin = margin(5,5,5,5)
   coord_fixed() +
   labs(color = "Morphotype", shape = "Origin", fill = "HDBSCAN clusters") +
   guides(colour = guide_legend(title.position = "top", ncol = 1, override.aes = list(fill = NA, linetype = 0)), 
@@ -366,7 +366,7 @@ g1_with_g2 <- g1 +
   annotation_custom(
     grob = g2_grob,
     xmin = 0, xmax = 0.65, # Adjust coordinates as needed
-    ymin = 0.6, ymax = 1   # Adjust coordinates as needed
+    ymin = 0.58, ymax = 0.99   # Adjust coordinates as needed
   )
 
 # Print the combined plot
