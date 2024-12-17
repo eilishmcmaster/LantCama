@@ -62,7 +62,8 @@ m2 <- dms$meta$analyses %>% as.data.frame
 m2$lat <- as.numeric(m2$lat)
 m2$long <- as.numeric(m2$long)
 #### colours 
-morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
+# morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
+morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange", undetermined="#2B2B2B")
 
 
 ### PCA  ################################################################################
@@ -82,7 +83,7 @@ pcnames <- paste0(colnames(g_pca_df)," (",
 pca_plot1 <- ggplot(g_pca_df2, aes(x=PC1, y=PC2, colour=morphid2))+ xlab(pcnames[1])+ylab(pcnames[2])+
   geom_point(size=0.5)+
   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+geom_hline(yintercept = 0, alpha=0.2)+
-  labs(colour="`HBDSCAN Cluster`")+
+  labs(colour="HBDSCAN Cluster")+
   theme(legend.key.size = unit(0, 'lines'))+
   guides(colour = guide_legend(title.position = "top"))+
   scale_colour_manual(values=morphid_colours)
@@ -183,8 +184,8 @@ n_clusters <- length(unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))  # Exclud
 # tsne_cols <- brewer.pal(n_clusters, "Paired")
 # tsne_cols <- c("white", tsne_cols)
 # names(tsne_cols) <- c(NA, unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))
-
-tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
+# RColorBrewer::brewer.pal(n_clusters, "Pastel1")
+tsne_cols <- sbrewer.pal()tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
                          "#FB9A99", "#E31A1C", "#FDBF6F"), names = c(NA, "A", "B", "C", 
                                                                      "D", "E", "F", "G"))
 
@@ -361,7 +362,7 @@ main_plot <- ggplot(qmatrix_df2, aes(x = sample, y = proportion, fill = factor(l
   facet_grid(~cluster, scales = "free_x", space = "free_x") +
   theme_few() +
   # scale_fill_brewer(palette = "Greys") +  # Use a more subtle color palette
-  scale_fill_brewer(palette = "Set3") +  # Use a more subtle color palette
+  scale_fill_brewer(palette = "Set3") +  # Use a more subtle color palette #Set3
   theme(
     axis.title.y = element_text(size = 11, angle = 0, hjust = 1, vjust = 0.5),  # Right justified and centered vertically
     axis.text = element_blank(),
@@ -427,41 +428,13 @@ cluster_plot <- ggplot(qmatrix_df2, aes(x = sample, y = 1, fill = cluster)) +
     panel.spacing = unit(0, "lines"),
     panel.border = element_rect(color = "grey20", fill = NA, size = 0.5),  # Add panel border
     strip.text = element_blank()  # Remove facet panel text
-    # plot.margin = margin(0, 2, 0, 2, unit = "pt")  # Smaller margins (top, right, bottom, left)
   )
-
 
 
 combined_lea_plot <- ggarrange(main_plot,cluster_plot,morphotype_plot,lat_plot,
           nrow=4,
           heights=c(1,0.1,0.1, 0.1),
           align="v", common.legend = TRUE, legend='right')
-
-# combined_lea_plot <-ggarrange(main_plot,morphotype_plot,lat_plot,
-#                               nrow=4, 
-#                               heights=c(1,0.15,0.15, 0.15),
-#                               align="v", common.legend = TRUE, legend='right')
-
-# combined_plots2 <- multi_panel_figure(
-#   width = c(7.5, 25),   # Adjust these dimensions as needed
-#   height = c(7,7,7,6),
-#   unit = "cm",
-#   panel_label_type = "upper-roman"
-# )
-# 
-# # Fill the panels with the respective plots
-# combined_plots2 %<>%
-#   fill_panel(pca_plot1 + theme(legend.position = "none"), column = 1, row = 1, label = "A") %<>%
-#   fill_panel(tsne_plot2 + theme(legend.position = "none"), column = 1, row = 2, label = "B") %<>%
-#   fill_panel(tsne_plot1 + theme(legend.position = "none"), column = 1, row = 3, label = "C") %<>%
-#   fill_panel(draw(ht, merge_legends = TRUE), column = 2, row = 1:3, label = "D") %<>%
-#   fill_panel(combined_lea_plot, column = 1:2, row = 4, label = "E")
-# 
-# 
-# ggsave('LantCama/outputs/Figure1_combined_plots2.pdf', combined_plots2, width = 34, height = 30, units = "cm")
-# ggsave('LantCama/outputs/Figure1_combined_plots2.png', combined_plots2, width = 34, height = 30,dpi=600, units = "cm")
-# 
-# ###
 
 combined_plots2 <- multi_panel_figure(
   width = c(6, 18),   # Adjust these dimensions as needed
@@ -553,15 +526,6 @@ od <- colnames(mat2)[column_order(order_hm)]
 mat = mat[od, od]
 mat2 = mat2[od, od]
 
-# order_hm <- Heatmap(mat,
-#                     cluster_rows = TRUE,
-#                     cluster_columns = TRUE)
-# od <- colnames(mat)[column_order(order_hm)]
-#
-# mat = mat[od, od]
-# mat2 = mat2[od, od]
-
-# agg <- unique(m2[, c("site_cluster", "cluster",'national2')]) # create aggregated df of pop_largeecies and site_cluster
 agg <- unique(m2[, c("site_cluster",'cluster')]) # create aggregated df of pop_largeecies and site_cluster
 
 mat2 <- merge(mat2, agg, by.x=0, by.y="site_cluster", all.y=FALSE) #add aggregated df to mat2 (fst)
