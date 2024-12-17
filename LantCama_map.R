@@ -107,7 +107,7 @@ whole_aus_sample_map <- ggplot(difference_poly) +
   geom_sf(data=ozmaps::abs_ste, fill="transparent", color='black') +
   geom_point(m2, 
              mapping=aes(x=long, y=lat), 
-             alpha=1, size=1, color='red', shape=16)
+             alpha=1, size=1, color='blue', shape=16)
 
 
 #
@@ -164,7 +164,8 @@ morphotype_sample_map2 <- ggplot(difference_poly) +
   ylim(ylims2) +
   labs(y = element_blank(), x = element_blank()) +
   theme_few() +
-  theme(axis.text.x = element_text(angle = 90), panel.border = element_rect()) +
+  theme(axis.text.x = element_text(angle = 90), panel.border = element_rect(),
+        plot.margin = margin(0, 2, 0, 2)) +# Margins: top, right, bottom, left
   geom_point(m2[which(m2$morphid2!="undetermined"),], 
              mapping = aes(x = long, y = lat, fill = morphid2), 
              alpha = 1, size = 2, show.legend = F, stroke = 0.1, shape = 21, color = "white") +
@@ -221,7 +222,7 @@ create_image_plot <- function(image_path, title) {
   # Create ggplot with image and title
   ggplot() + 
     annotation_custom(img_grob) + 
-    labs(title = title) +   # Add title
+    # labs(title = title) +   # Add title
     theme_void() + 
     theme(
       plot.margin = margin(0, 1, 0, 1),           # Margins: top, right, bottom, left
@@ -241,17 +242,41 @@ image_grid <- ggarrange(
 )
 
 # Assuming morphotype_sample_map is already defined, combine it with the image grid
-combined_plot <- ggarrange(
-  image_grid+theme(plot.margin = margin(0,10,0,40)),           # Image grid plot
+combined_image_map_plot <- ggarrange(
+  image_grid+theme(plot.margin = margin(0,1,0,34)),           # Image grid plot
   morphotype_sample_map2, # The main ggplot
   nrow = 2,             # Two columns
   heights = c(1, 2.5)
   )
-  # labels = c("a", "b"),
-  # font.label = list(face = "plain"))
 
 # Save the combined plot to a file
-ggsave('LantCama/outputs/morphotype_sample_map.png', combined_plot, dpi = 300, width = 15, height = 10, units = "cm", bg = "white")
+ggsave('LantCama/outputs/combined_image_map_plot.png', combined_image_map_plot, dpi = 300, width = 15, height = 10, units = "cm", bg = "white")
+
+
+combined_image_map_plot2 <- ggarrange(whole_aus_sample_map, combined_image_map_plot, nrow=2)
+ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 15, height = 20, units = "cm", bg = "white")
+
+combined_image_map_plot2 <- ggarrange(whole_aus_sample_map, combined_image_map_plot, ncol=2, widths=c(1,1.5))
+ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 20, height = 10, units = "cm", bg = "white")
+
+
+
+
+image_grid2 <- ggarrange(
+  plotlist = plots, 
+  ncol = 1, nrow = 5  # One column, five rows
+)
+aus_and_facet <- ggarrange(whole_aus_sample_map, morphotype_sample_map, nrow=2, heights=c(1,1.7))
+
+combined_image_map_plot2 <- ggarrange(
+  image_grid2, #+theme(plot.margin = margin(0,1,0,34)),           # Image grid plot
+  aus_and_facet, # The main ggplot
+  ncol = 2,             # Two columns
+  widths = c(1, 3)
+)
+
+ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 15, height = 20, units = "cm", bg = "white")
+
 
 #### tsne cluster map ####
 m2$cluster <- factor(m2$cluster, levels=c("A","B",'C','D', 'E', 'F', 'G', 'H', NA))
