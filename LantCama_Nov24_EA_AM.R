@@ -84,7 +84,7 @@ custom_theme <- theme(axis.text = element_text(size=8),
                       legend.title = element_text(size=10),
                       plot.title = element_text(size = 10),
                       legend.key.size = unit(0.5, 'lines'),
-                      legend.key.height = unit(0, 'lines'))
+                      legend.key.height = unit(0.5, 'lines'))
 
 
 custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),
@@ -223,7 +223,7 @@ hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2')])
   scale_fill_manual(values=c(tsne_cols,nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size=0.8) +
-  geom_rootedge(0.0005, size=0.3)+
+  # geom_rootedge(0.0005, size=0.3)+
   geom_label2(data=upgma, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
   # geom_label2(data=upgma, aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
   #             color='red', nudge_x = 0.0003, label.size=0, fill="transparent", size=2) +
@@ -333,7 +333,7 @@ hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),#'svdq_p
   scale_fill_manual(values = c(nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size = 0.8) +
-  geom_rootedge(0.0005, size = 0.3) +
+  # geom_rootedge(0.0005, size = 0.3) +
   theme(legend.position = "none", plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
   geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
               color='red', nudge_x = -0.0003,nudge_y=1.1, label.size=0, fill="transparent", size=1.5)
@@ -366,3 +366,45 @@ ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.pdf",
 ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.png",
        g1_with_g2, width = 18, height = 24, units = "cm", dpi=300, bg='white')
 
+######## heterozygosity ##########
+meta <- read.xlsx("/Users/eilishmcmaster/Documents/LantCama/LantCama/outputs/LantCama_tsne_HDBSCAN_clusters.xlsx") # get meta for lat long limits
+
+ho_0 <- individual_Ho(dms$gt, genetic_group_variable = rep("lcamara",length(dms$sample_names)), maf = 0)
+ho_2 <- individual_Ho(dms$gt, genetic_group_variable = rep("lcamara",length(dms$sample_names)), maf = 0.02)
+
+hist(ho_2)
+m2$Ho_0 <- ho_0[match(m2$sample, names(ho_0))]
+m2$Ho_2 <- ho_2[match(m2$sample, names(ho_2))]
+m2$cluster <- meta$cluster[match(m2$sample, meta$sample)]
+m2$cluster[which(m2$national2=="Native range")] <- "Native range"
+m2$cluster[which(is.na(m2$cluster))] <- "Unclustered Australian"
+m2$cluster <- factor(m2$cluster, levels = c('A','B','C','D','E','F','G','Unclustered Australian','Native range'))
+tsne_cols3 <- c(tsne_cols,`Unclustered Australian`='grey80', `Native range`='grey30')
+
+ho_boxplot <- ggplot(m2, aes(x=cluster, y=Ho_2, fill=cluster))+
+  geom_boxplot()+
+  scale_fill_manual(values=tsne_cols3)+
+  theme_few()+
+  theme(legend.position = 'none', axis.text.x = element_text(angle=45, hjust=1))+
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 6))+
+  labs(x="HDBSCAN Cluster", y="Ho (MAF 2%)")
+ho_boxplot
+
+
+ho_hist <- ggplot(m2, aes(x=Ho_2, fill=cluster))+
+  geom_histogram(position='stack', binwidth = 0.01, boundary=0)+
+  scale_fill_manual(values=tsne_cols3)+
+  theme_few()+
+  theme(legend.position = 'bottom', 
+        legend.key.size = unit(0.5, 'lines'),
+        legend.key.height = unit(0.5, 'lines')
+        )+
+  labs(x="Ho (MAF 2%)", y="Count (individuals)", fill="HDBSCAN\nCluster")+
+  scale_x_continuous(expand=c(0,0))+
+  scale_y_continuous(expand=c(0,0),limits = c(0,170))+
+  guides(fill=guide_legend(ncol=3))
+
+ho_hist
+
+combined_hos <- ggarrange(ho_boxplot, ho_hist, labels="auto", font.label = list(face = "plain"),align='v')
+ggsave('LantCama/outputs/Figure2_ho_box_hist.png',dpi = 600, combined_hos, width = 20, height = 10, units = "cm")
