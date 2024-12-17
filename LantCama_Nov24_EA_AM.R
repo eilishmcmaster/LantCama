@@ -62,12 +62,26 @@ m2 <- dms$meta$analyses %>% as.data.frame
 m2$lat <- as.numeric(m2$lat)
 m2$long <- as.numeric(m2$long)
 
+table(m2$national2)
+
 #### read clusters ###
 
 m_clusters <- read.xlsx('LantCama/outputs/LantCama_tsne_HDBSCAN_clusters.xlsx')
 m2$clusters <- m_clusters$cluster[match(m2$sample, m_clusters$sample)] %>% as.vector()
 
 #### colours 
+
+countries <- m2 %>%
+  filter(national2 == "Native range") %>%
+  group_by(country) %>%
+  summarise(avg_lat = mean(lat, na.rm = TRUE)) %>%
+  arrange(avg_lat) %>%
+  pull(country)
+
+m2$country <- factor(m2$country, levels=countries)
+
+country_colours <- named_list_maker(countries, 'RdYlGn', 11)
+
 morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange", undetermined="#2B2B2B")
 
 tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
@@ -98,7 +112,6 @@ length(dms_maf2$locus_names)
 
 library(tanggle)
 library(RSplitsTree)
-# splitstree(dist(dms$gt, method = "euclidean"), 'LantCama/outputs/20241205_all_LantCama_nexus_file_for_R_80missing.nex')
 library(ggplot2)
 library(phangorn)
 library(ggforce)
@@ -155,14 +168,14 @@ splitstree_plot <- ggplot(Nnet, aes(x = x, y = y)) +
   scale_colour_manual(values = morphid_colours, na.translate = FALSE) +
   scale_shape_manual(values=16:17,na.translate = FALSE)+
   theme_void() +
-  expand_limits(x = c(min(splitstree$x) - 0.01 * net_x_axis, max(splitstree$x) + 0.1 * net_x_axis),
-                y = c(min(splitstree$y) - 0.01 * net_y_axis, max(splitstree$y) + 0.01 * net_y_axis)) +
-  theme(legend.position = "bottom", legend.key = element_blank(),
-        legend.key.size = unit(0, 'lines')) +
+  # expand_limits(x = c(min(splitstree$x) - 0.01 * net_x_axis, max(splitstree$x) + 0.1 * net_x_axis),
+  #               y = c(min(splitstree$y) - 0.01 * net_y_axis, max(splitstree$y) + 0.01 * net_y_axis)) +
+  theme(legend.position = "right", legend.key = element_blank(),legend.justification = "top",
+        legend.key.size = unit(0, 'lines'), plot.margin = margin(5,5,5,5)) +
   coord_fixed() +
   labs(color = "Morphotype", shape = "Origin", fill = "HDBSCAN clusters") +
-  guides(colour = guide_legend(title.position = "top", nrow = 2, override.aes = list(fill = NA, linetype = 0)), 
-         fill = guide_legend(title.position = "top", nrow = 2, override.aes = list(color = NA)),
+  guides(colour = guide_legend(title.position = "top", ncol = 1, override.aes = list(fill = NA, linetype = 0)), 
+         # fill = guide_legend(title.position = "top", nrow = 2, override.aes = list(color = NA)),
          shape = guide_legend(title.position = "top", nrow = 2))+
   geom_shape(data = hull, alpha = 0.3, expand = 0.015, radius = 0.015,
              aes(group=cluster),fill='black', color = "white", show.legend = FALSE) + #aes(fill = cluster)
@@ -180,8 +193,8 @@ ggsave("LantCama/outputs/LantCama_splitstree_HDBSCAN_clusters_80miss_maf2.pdf",
 ggsave("LantCama/outputs/LantCama_splitstree_HDBSCAN_clusters_80miss_maf2.png",
        splitstree_plot, width = 20, height = 20, units = "cm", dpi = 600)
 
-
-### UPGMA #################
+# 
+# ### UPGMA #################
 # # write input
 # # for iqtree and mrbayes
 # dart2svdquartets(dms_maf2, RandRbase, species, dataset, add_pop=TRUE, pop=dms_maf2$sample_names)
@@ -205,6 +218,7 @@ ggsave("LantCama/outputs/LantCama_splitstree_HDBSCAN_clusters_80miss_maf2.png",
 #### read in tree ####
 
 upgma <- read.tree('/Users/eilishmcmaster/Documents/LantCama/upgma/treeUPGMA.tree')
+
 upgma$node.label <- round(as.numeric(upgma$node.label),0)
 
 x1 <- m2[m2$sample %in% upgma$tip.label,]
@@ -230,10 +244,9 @@ hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2')])
   theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))
   # geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
 
-hmt
-
+ 
 # Create separate ggplots for each fill scheme
-plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=clusters)) +
+plot_cluster_pop <- ggplot(m2, aes(x=long,y=lat, fill=clusters)) +
   geom_tile() +
   scale_fill_manual(name = "HBDSCAN\ncluster", values = tsne_cols2, na.translate = FALSE) +
   custom_legend_theme
@@ -249,25 +262,29 @@ plot_morphid2 <- ggplot(m2, aes(x=long,y=lat, fill=morphid2)) +
   scale_fill_manual(name = "Morphotype", values = morphid_colours, na.value = "grey90")+
   custom_legend_theme
 
+plot_country <- ggplot(m2[which(m2$national2=="Native range"& !is.na(m2$country)),], aes(x=long,y=lat, fill=country)) +
+  geom_tile() +
+  scale_fill_manual(name = "Country", values = country_colours)+
+  custom_legend_theme
+
 plot_prob <- ggplot(data.frame(label=upgma$node.label, x=1:length(upgma$node.label), y=1:length(upgma$node.label)),
                     aes(x=x, y=y,colour=label)) +
   geom_point() +scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)+labs(color="Probability")+custom_legend_theme
 
 
 # Extract legends from the ggplots
-legend_svdq_pop <- cowplot::get_legend(plot_svdq_pop)
+legend_cluster_pop <- cowplot::get_legend(plot_cluster_pop +theme(legend.direction = 'horizontal'))
 legend_national2 <- cowplot::get_legend(plot_national2+theme(legend.direction = 'horizontal'))
 legend_prob <- cowplot::get_legend(plot_prob)
 legend_morphid2 <- cowplot::get_legend(plot_morphid2+theme(legend.direction = 'horizontal'))
+legend_country <- cowplot::get_legend(plot_country+theme(legend.direction = 'horizontal'))
 
 
+legends <- cowplot::plot_grid(legend_cluster_pop,legend_morphid2, legend_national2, nrow=1, align="hv")  # Adjust aspect #legend_prob
+legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2,  nrow=1, align="hv") #+ theme(aspect.ratio = 1/3) # Adjust aspect 
+legends3 <- cowplot::plot_grid(legends2, legend_country,nrow=2)
 
-legends <- cowplot::plot_grid(legend_svdq_pop,legend_morphid2, legend_national2, ncol=1, align="hv") + 
-  theme(aspect.ratio = 5/1) # Adjust aspect #legend_prob
-legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2, ncol=2, align="hv") #+ theme(aspect.ratio = 1/3) # Adjust aspect 
-
-
-combined_plot <- cowplot::plot_grid(hmt, legends,nrow = 1, rel_widths = c(1, 0.15))
+combined_plot <- cowplot::plot_grid(hmt, legends,nrow = 2, rel_heights = c(1, 0.15))
 combined_plot
 
 ggsave("LantCama/outputs/LantCama_upgma_maf2.pdf",
@@ -284,12 +301,8 @@ library(openxlsx)
 library(tidytree)
 library(RColorBrewer)
 
-
-
-
-nodes.to.collapse <- c(1030, 1050, 904,953,825,554,673)
-
-nodes.identity <- rev(c("D", "A", "C", "B", "F", "E", "G"))
+nodes.to.collapse <- c(1293,1281,1003, 1045, 946, 665, 784)
+nodes.identity <- c('G','E', 'F','B', 'C', 'A', 'D')
 
 names(nodes.identity) <- nodes.to.collapse
 
@@ -325,24 +338,23 @@ gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),
   # theme(legend.position = "none", plot.margin = margin(3, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
   # coord_cartesian(clip = "off")
 
+
 # Add gheatmap and additional layers as required
-hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),#'svdq_pop_label',
+hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2','country')]),#'svdq_pop_label',
                  offset = 0.001, width = .1, font.size = 10,
                  colnames_angle = 90, colnames_position = "top",
-                 custom_column_labels = c('Morphotype', "Origin"), hjust = 0) +
-  scale_fill_manual(values = c(nation_colours, morphid_colours), na.value = "white") +
+                 custom_column_labels = c('Morphotype', "Origin", 'Country'), hjust = 0) +
+  scale_fill_manual(values = c(nation_colours, morphid_colours,country_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size = 0.8) +
-  # geom_rootedge(0.0005, size = 0.3) +
+  geom_rootedge(0.0005, size = 0.3) +
   theme(legend.position = "none", plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
   geom_label2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
               color='red', nudge_x = -0.0003,nudge_y=1.1, label.size=0, fill="transparent", size=1.5)
 # geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
 
-# Plot the final tree
-hmt2
 
-combined_plot2 <- cowplot::plot_grid(hmt2, legends2, nrow = 2, rel_heights = c(1, 0.05))
+combined_plot2 <- cowplot::plot_grid(hmt2, legends3, nrow = 2, rel_heights = c(1, 0.12))
 
 g1 <- combined_plot2
 g2 <- splitstree_plot
@@ -353,15 +365,15 @@ g2_grob <- ggplotGrob(g2)
 g1_with_g2 <- g1 +
   annotation_custom(
     grob = g2_grob,
-    xmin = 0, xmax = 0.6, # Adjust coordinates as needed
-    ymin = 0.45, ymax = 1   # Adjust coordinates as needed
+    xmin = 0, xmax = 0.65, # Adjust coordinates as needed
+    ymin = 0.6, ymax = 1   # Adjust coordinates as needed
   )
 
 # Print the combined plot
 # g1_with_g2
 
 ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.pdf",
-       g1_with_g2, width = 20, height = 30, units = "cm", dpi=600, bg='white')
+       g1_with_g2, width = 20, height = 25, units = "cm", dpi=600, bg='white')
 
 ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.png",
        g1_with_g2, width = 18, height = 24, units = "cm", dpi=300, bg='white')
