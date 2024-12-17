@@ -115,7 +115,7 @@ ggsave('LantCama/outputs/test_map.pdf', whole_aus_sample_map, width = 20, height
 
 
 xlims2 <- c(140, 155)
-ylims2 <- c(-35,-10)
+ylims2 <- c(-37,-10)
 
 m2$morphid2 <- factor(m2$morphid2, levels=c("pink","PER", "red", "orange",  "white","undetermined"))
 
@@ -150,7 +150,53 @@ print(morphotype_sample_map)
 # ggsave('LantCama/outputs/morphotype_sample_map.pdf', morphotype_sample_map, width = 20, height = 20, units = "cm")
 ggsave('LantCama/outputs/morphotype_sample_map.png', morphotype_sample_map,dpi=600, width = 20, height = 20, units = "cm")
 
-#### images plot ####
+
+ggarrange(whole_aus_sample_map, morphotype_sample_map, nrow=2, heights=c(1.2,2))
+
+
+morphotype_sample_map2 <- ggplot(difference_poly) + 
+  geom_point(result2, 
+             mapping = aes(x = decimalLongitude, y = decimalLatitude), 
+             alpha = 0.2, size = 1, color = 'grey80', stroke = 0) + 
+  geom_sf(fill = '#cbe6ef', color = 'transparent') + ##cbe6ef
+  geom_sf(data = ozmaps::abs_ste, fill = "transparent", color = 'black') +
+  xlim(xlims2) +
+  ylim(ylims2) +
+  labs(y = element_blank(), x = element_blank()) +
+  theme_few() +
+  theme(axis.text.x = element_text(angle = 90), panel.border = element_rect()) +
+  geom_point(m2[which(m2$morphid2!="undetermined"),], 
+             mapping = aes(x = long, y = lat, fill = morphid2), 
+             alpha = 1, size = 2, show.legend = F, stroke = 0.1, shape = 21, color = "white") +
+  facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first), nrow = 1) +  # Apply the custom labeller
+  scale_fill_manual(values = morphid_colours)
+
+# ####
+# data_2003 <- read.csv('/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/Lantana distribution 2003 paper cleaned.csv')
+# colnames(data_2003)[3] <- 'morphid2'
+# data_2003$morphid2 <- factor(data_2003$morphid2, levels=c("pink","PER", "red", "orange",  "white","undetermined"))
+# 
+# ggplot(difference_poly) + 
+#   geom_point(result2,
+#              mapping = aes(x = decimalLongitude, y = decimalLatitude),
+#              alpha = 0.2, size = 1, color = 'grey80', stroke = 0) +
+#   geom_point(data_2003,
+#              mapping = aes(x = long, y = lat),
+#              alpha = 1, size = 1, color = 'grey20', stroke = 0) +
+#   geom_sf(fill = '#cbe6ef', color = 'transparent') + ##cbe6ef
+#   geom_sf(data = ozmaps::abs_ste, fill = "transparent", color = 'black') +
+#   xlim(xlims2) +
+#   ylim(ylims2) +
+#   labs(y = element_blank(), x = element_blank()) +
+#   theme_few() +
+#   theme(axis.text.x = element_text(angle = 90), panel.border = element_rect()) +
+#   geom_point(m2, 
+#              mapping = aes(x = long, y = lat, color = morphid2), 
+#              alpha = 1, size = 1, show.legend = F, shape = 4, stroke=1) +
+#   facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first)) +  # Apply the custom labeller
+#   scale_color_manual(values = morphid_colours)
+
+#### images plot #################################
 # Load necessary libraries
 library(ggplot2)
 library(ggpubr)
@@ -191,20 +237,21 @@ plots <- lapply(names(image_paths), function(name) {
 # Arrange the plots in a single column
 image_grid <- ggarrange(
   plotlist = plots, 
-  ncol = 1, nrow = 5  # One column, five rows
+  nrow = 1, ncol = 5  # One column, five rows
 )
 
 # Assuming morphotype_sample_map is already defined, combine it with the image grid
 combined_plot <- ggarrange(
-  image_grid,           # Image grid plot
-  morphotype_sample_map, # The main ggplot
-  ncol = 2,             # Two columns
-  widths = c(1, 2),     # Set width ratio for the plots
-  labels = c("a", "b"),
-  font.label = list(face = "plain"))
+  image_grid+theme(plot.margin = margin(0,10,0,40)),           # Image grid plot
+  morphotype_sample_map2, # The main ggplot
+  nrow = 2,             # Two columns
+  heights = c(1, 2.5)
+  )
+  # labels = c("a", "b"),
+  # font.label = list(face = "plain"))
 
 # Save the combined plot to a file
-ggsave('LantCama/outputs/morphotype_sample_map.png', combined_plot, dpi = 300, width = 15, height = 15, units = "cm", bg = "white")
+ggsave('LantCama/outputs/morphotype_sample_map.png', combined_plot, dpi = 300, width = 15, height = 10, units = "cm", bg = "white")
 
 #### tsne cluster map ####
 m2$cluster <- factor(m2$cluster, levels=c("A","B",'C','D', 'E', 'F', 'G', 'H', NA))
