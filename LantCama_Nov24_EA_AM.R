@@ -68,13 +68,18 @@ m_clusters <- read.xlsx('LantCama/outputs/LantCama_tsne_HDBSCAN_clusters.xlsx')
 m2$clusters <- m_clusters$cluster[match(m2$sample, m_clusters$sample)] %>% as.vector()
 
 #### colours 
-morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
+# morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
 
+morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange", undetermined="#2B2B2B")
+
+tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
+                         "#FB9A99", "#E31A1C", "#FDBF6F"), names = c(NA, "A", "B", "C", 
+                                                                     "D", "E", "F", "G"))
 
 n_clusters <- length(unique(m2$cluster[!is.na(m2$cluster)]))  # Exclude NA from the count
-tsne_cols <- brewer.pal(n_clusters, "Paired")
-tsne_cols <- c("white", tsne_cols)
-names(tsne_cols) <- c(NA, unique(m2$cluster[!is.na(m2$cluster)]))
+# tsne_cols <- brewer.pal(n_clusters, "Paired")
+# tsne_cols <- c("white", tsne_cols)
+# names(tsne_cols) <- c(NA, unique(m2$cluster[!is.na(m2$cluster)]))
 tsne_cols2 <- tsne_cols[!is.na(names(tsne_cols))]
 
 
@@ -116,7 +121,6 @@ hull <- splitstree %>% group_by(cluster) %>%
   slice(chull(x, y))
 hull <- hull[!hull$cluster=='ungrouped',]
 
-morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
 
 #
 
@@ -145,9 +149,10 @@ splitstree_plot <- ggplot(Nnet, aes(x = x, y = y)) +
   geom_splitnet(layout = "slanted", size = 0.2) +
   # scale_fill_manual(values = tsne_cols, na.translate = FALSE) +
   scale_colour_manual(values = morphid_colours, na.translate = FALSE) +
+  scale_shape_manual(values=16:17,na.translate = FALSE)+
   theme_void() +
-  expand_limits(x = c(min(x_filtered$x) - 0.01 * net_x_axis, max(x_filtered$x) + 0.1 * net_x_axis),
-                y = c(min(x_filtered$y) - 0.01 * net_y_axis, max(x_filtered$y) + 0.01 * net_y_axis)) +
+  expand_limits(x = c(min(splitstree$x) - 0.01 * net_x_axis, max(splitstree$x) + 0.1 * net_x_axis),
+                y = c(min(splitstree$y) - 0.01 * net_y_axis, max(splitstree$y) + 0.01 * net_y_axis)) +
   theme(legend.position = "bottom", legend.key = element_blank(),
         legend.key.size = unit(0, 'lines')) +
   coord_fixed() +
@@ -157,8 +162,8 @@ splitstree_plot <- ggplot(Nnet, aes(x = x, y = y)) +
          shape = guide_legend(title.position = "top", nrow = 2))+
   geom_shape(data = hull, alpha = 0.3, expand = 0.015, radius = 0.015,
              aes(group=cluster),fill='black', color = "white", show.legend = FALSE) + #aes(fill = cluster)
-  geom_point(data = x_filtered, aes(shape = national2), color = "white", size = 2) +
-  geom_point(data = x_filtered, aes(color = morphid2, shape = national2)) +
+  geom_point(data = splitstree, aes(shape = national2), color = "white", size = 2) +
+  geom_point(data = splitstree, aes(color = morphid2, shape = national2)) +
   geom_text_repel(data = labels, aes(label = cluster), size = 4, nudge_y=0.001, nudge_x=0.001)+
   custom_legend_theme
 
@@ -210,7 +215,7 @@ ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1
 hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2')]),#'svdq_pop_label',
                 offset=0.0007, width=.05, font.size=0,
                 colnames_angle=90, colnames_position="top",
-                custom_column_labels=c("HBDSCAN cluster",'Morphotype',"Country"), hjust=0) +
+                custom_column_labels=c("HBDSCAN cluster",'Morphotype',"Origin"), hjust=0) +
   scale_fill_manual(values=c(tsne_cols,nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size=0.8) +
@@ -231,7 +236,7 @@ plot_svdq_pop <- ggplot(m2, aes(x=long,y=lat, fill=clusters)) +
 
 plot_national2 <- ggplot(m2, aes(x=long,y=lat, fill=national2)) +
   geom_tile() +
-  scale_fill_manual(name = "Country", values = nation_colours, na.value = "grey90")+
+  scale_fill_manual(name = "Origin", values = nation_colours, na.value = "grey90")+
   custom_legend_theme
 
 
@@ -247,15 +252,15 @@ plot_prob <- ggplot(data.frame(label=upgma$node.label, x=1:length(upgma$node.lab
 
 # Extract legends from the ggplots
 legend_svdq_pop <- cowplot::get_legend(plot_svdq_pop)
-legend_national2 <- cowplot::get_legend(plot_national2)
+legend_national2 <- cowplot::get_legend(plot_national2+theme(legend.direction = 'horizontal'))
 legend_prob <- cowplot::get_legend(plot_prob)
-legend_morphid2 <- cowplot::get_legend(plot_morphid2)
+legend_morphid2 <- cowplot::get_legend(plot_morphid2+theme(legend.direction = 'horizontal'))
 
 
 
 legends <- cowplot::plot_grid(legend_svdq_pop,legend_morphid2, legend_national2, ncol=1, align="hv") + 
   theme(aspect.ratio = 5/1) # Adjust aspect #legend_prob
-legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2, ncol=1, align="hv") + theme(aspect.ratio = 3/1) # Adjust aspect 
+legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2, ncol=2, align="hv") #+ theme(aspect.ratio = 1/3) # Adjust aspect 
 
 
 combined_plot <- cowplot::plot_grid(hmt, legends,nrow = 1, rel_widths = c(1, 0.15))
@@ -274,6 +279,9 @@ library(ape)
 library(openxlsx)
 library(tidytree)
 library(RColorBrewer)
+
+
+
 
 nodes.to.collapse <- c(1030, 1050, 904,953,825,554,673)
 
@@ -297,7 +305,7 @@ collapseMyClade <- function(.p, .node) {
   fill_color <- tsne_cols[label]
   .p <- collapse(.p, .node, "max",  fill = fill_color, color="black", size=0.3)
   .p <- .p + geom_cladelabel(node = .node,align = TRUE, vjust=-0.02,offset.text=-0.0005, label = label,
-                             fontsize = 2)
+                             fontsize = 3)
   return(.p)
 }
 
@@ -309,7 +317,7 @@ ggtree_obj2 <- Reduce(collapseMyClade, nodes.to.collapse, ggtree_obj2)
 gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),
          offset = 0.001, width = .1, font.size = 2,
          colnames_position = "top")
-         # custom_column_labels = c('Morphotype', "Country"))
+         # custom_column_labels = c('Morphotype', "Origin"))
   # theme(legend.position = "none", plot.margin = margin(3, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))+
   # coord_cartesian(clip = "off")
 
@@ -317,7 +325,7 @@ gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),
 hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),#'svdq_pop_label',
                  offset = 0.001, width = .1, font.size = 10,
                  colnames_angle = 90, colnames_position = "top",
-                 custom_column_labels = c('Morphotype', "Country"), hjust = 0) +
+                 custom_column_labels = c('Morphotype', "Origin"), hjust = 0) +
   scale_fill_manual(values = c(nation_colours, morphid_colours), na.value = "white") +
   theme_tree2() +
   geom_tiplab(aes(label = label), size = 0.8) +
@@ -330,7 +338,7 @@ hmt2 <- gheatmap(ggtree_obj2, as.matrix(x1[,c('morphid2','national2')]),#'svdq_p
 # Plot the final tree
 hmt2
 
-combined_plot2 <- cowplot::plot_grid(hmt2, legends2,nrow = 1, rel_widths = c(1, 0.2))
+combined_plot2 <- cowplot::plot_grid(hmt2, legends2, nrow = 2, rel_heights = c(1, 0.05))
 
 g1 <- combined_plot2
 g2 <- splitstree_plot
@@ -342,14 +350,15 @@ g1_with_g2 <- g1 +
   annotation_custom(
     grob = g2_grob,
     xmin = 0, xmax = 0.6, # Adjust coordinates as needed
-    ymin = 0.5, ymax = 1   # Adjust coordinates as needed
+    ymin = 0.45, ymax = 1   # Adjust coordinates as needed
   )
 
 # Print the combined plot
 # g1_with_g2
 
 ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.pdf",
-       g1_with_g2, width = 20, height = 30, units = "cm", dpi=600)
+       g1_with_g2, width = 20, height = 30, units = "cm", dpi=600, bg='white')
 
 ggsave("LantCama/outputs/LantCama_upgma_splitstree_maf2.png",
-       g1_with_g2, width = 25, height = 30, units = "cm", dpi=300)
+       g1_with_g2, width = 18, height = 24, units = "cm", dpi=300, bg='white')
+
