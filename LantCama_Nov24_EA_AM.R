@@ -68,19 +68,23 @@ m_clusters <- read.xlsx('LantCama/outputs/LantCama_tsne_HDBSCAN_clusters.xlsx')
 m2$clusters <- m_clusters$cluster[match(m2$sample, m_clusters$sample)] %>% as.vector()
 
 #### colours 
-# morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
-
 morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange", undetermined="#2B2B2B")
 
 tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
                          "#FB9A99", "#E31A1C", "#FDBF6F"), names = c(NA, "A", "B", "C", 
                                                                      "D", "E", "F", "G"))
 
-n_clusters <- length(unique(m2$cluster[!is.na(m2$cluster)]))  # Exclude NA from the count
-# tsne_cols <- brewer.pal(n_clusters, "Paired")
-# tsne_cols <- c("white", tsne_cols)
-# names(tsne_cols) <- c(NA, unique(m2$cluster[!is.na(m2$cluster)]))
+
 tsne_cols2 <- tsne_cols[!is.na(names(tsne_cols))]
+
+
+custom_theme <- theme(axis.text = element_text(size=8),
+                      axis.title = element_text(size=10),
+                      legend.text = element_text(size=8),
+                      legend.title = element_text(size=10),
+                      plot.title = element_text(size = 10),
+                      legend.key.size = unit(0.5, 'lines'),
+                      legend.key.height = unit(0, 'lines'))
 
 
 custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),

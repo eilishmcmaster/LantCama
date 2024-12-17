@@ -5,7 +5,13 @@ library(ggmap)
 library(openxlsx)
 
 morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange2", undetermined="#2B2B2B")
-
+custom_theme <- theme(axis.text = element_text(size=8),
+                      axis.title = element_text(size=10),
+                      legend.text = element_text(size=8),
+                      legend.title = element_text(size=10),
+                      plot.title = element_text(size = 10),
+                      legend.key.size = unit(0.5, 'lines'),
+                      legend.key.height = unit(0, 'lines'))
 
 # meta <- read.xlsx("/Users/eilishmcmaster/Documents/ZierObco/ZierObco/meta/ZierObco_DZ22-7321_meta.xlsx") # get meta for lat long limits
 
@@ -74,7 +80,12 @@ test_map
 xlims2 <- c(96.81703, 167.9969)
 ylims2 <- c(-8, -45)
 
-library(sf)
+### bound for zoom 
+
+xlims2 <- c(140, 155)
+ylims2 <- c(-36.4,-14.5)
+
+#### inverse australia polygon ####
 # Create the bounding box polygon
 bbox_poly <- st_as_sf(st_sfc(st_polygon(list(matrix(c(
   xlims2[1], ylims2[1],
@@ -98,24 +109,24 @@ whole_aus_sample_map <- ggplot(difference_poly) +
   geom_point(result2, 
              mapping=aes(x=decimalLongitude, y=decimalLatitude), 
              alpha=0.2, size=1, color='grey80', stroke=0)+ 
-  geom_sf(fill='lightblue2',color='transparent') +
-  xlim(xlims)+
-  ylim(ylims)+
+  geom_sf(fill='#cbe6ef',color='transparent') +
   labs(y=element_blank(), x=element_blank(), colour="ALA records")+
   theme_few()+
   theme(panel.background = element_rect(fill="white"))+
   geom_sf(data=ozmaps::abs_ste, fill="transparent", color='black') +
   geom_point(m2, 
              mapping=aes(x=long, y=lat), 
-             alpha=1, size=1, color='blue', shape=16)
+             alpha=1, size=1, color='blue', shape=16)+
+  annotation_custom(
+    grob = rectGrob(gp = gpar(col = "red", fill = NA, lwd = 1 )), 
+    xmin = xlims2[1], xmax = xlims2[2], ymin = ylims2[1], ymax = ylims2[2]
+  )+
+  scale_x_continuous(limits = xlims, labels = scales::number_format(accuracy = 5)) +
+  scale_y_continuous(limits=ylims, labels = scales::number_format(accuracy = 5))
 
+whole_aus_sample_map
 
-#
-ggsave('LantCama/outputs/test_map.pdf', whole_aus_sample_map, width = 20, height = 15, units = "cm")
-
-
-xlims2 <- c(140, 155)
-ylims2 <- c(-37,-10)
+#### morphotype map ####
 
 m2$morphid2 <- factor(m2$morphid2, levels=c("pink","PER", "red", "orange",  "white","undetermined"))
 
@@ -132,70 +143,16 @@ morphotype_sample_map <- ggplot(difference_poly) +
              alpha = 0.2, size = 1, color = 'grey80', stroke = 0) + 
   geom_sf(fill = '#cbe6ef', color = 'transparent') + ##cbe6ef
   geom_sf(data = ozmaps::abs_ste, fill = "transparent", color = 'black') +
-  xlim(xlims2) +
-  ylim(ylims2) +
   labs(y = element_blank(), x = element_blank()) +
   theme_few() +
   theme(axis.text.x = element_text(angle = 90), panel.border = element_rect()) +
+  facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first)) +  # Apply the custom labeller
+  scale_fill_manual(values = morphid_colours)+
   geom_point(m2, 
              mapping = aes(x = long, y = lat, fill = morphid2), 
-             alpha = 1, size = 2, show.legend = F, stroke = 0.1, shape = 21, color = "white") +
-  facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first)) +  # Apply the custom labeller
-  scale_fill_manual(values = morphid_colours)
-
-# Print the plot
-print(morphotype_sample_map)
-
-
-# ggsave('LantCama/outputs/morphotype_sample_map.pdf', morphotype_sample_map, width = 20, height = 20, units = "cm")
-ggsave('LantCama/outputs/morphotype_sample_map.png', morphotype_sample_map,dpi=600, width = 20, height = 20, units = "cm")
-
-
-ggarrange(whole_aus_sample_map, morphotype_sample_map, nrow=2, heights=c(1.2,2))
-
-
-morphotype_sample_map2 <- ggplot(difference_poly) + 
-  geom_point(result2, 
-             mapping = aes(x = decimalLongitude, y = decimalLatitude), 
-             alpha = 0.2, size = 1, color = 'grey80', stroke = 0) + 
-  geom_sf(fill = '#cbe6ef', color = 'transparent') + ##cbe6ef
-  geom_sf(data = ozmaps::abs_ste, fill = "transparent", color = 'black') +
-  xlim(xlims2) +
-  ylim(ylims2) +
-  labs(y = element_blank(), x = element_blank()) +
-  theme_few() +
-  theme(axis.text.x = element_text(angle = 90), panel.border = element_rect(),
-        plot.margin = margin(0, 2, 0, 2)) +# Margins: top, right, bottom, left
-  geom_point(m2[which(m2$morphid2!="undetermined"),], 
-             mapping = aes(x = long, y = lat, fill = morphid2), 
-             alpha = 1, size = 2, show.legend = F, stroke = 0.1, shape = 21, color = "white") +
-  facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first), nrow = 1) +  # Apply the custom labeller
-  scale_fill_manual(values = morphid_colours)
-
-# ####
-# data_2003 <- read.csv('/Users/eilishmcmaster/Documents/LantCama/LantCama/meta/Lantana distribution 2003 paper cleaned.csv')
-# colnames(data_2003)[3] <- 'morphid2'
-# data_2003$morphid2 <- factor(data_2003$morphid2, levels=c("pink","PER", "red", "orange",  "white","undetermined"))
-# 
-# ggplot(difference_poly) + 
-#   geom_point(result2,
-#              mapping = aes(x = decimalLongitude, y = decimalLatitude),
-#              alpha = 0.2, size = 1, color = 'grey80', stroke = 0) +
-#   geom_point(data_2003,
-#              mapping = aes(x = long, y = lat),
-#              alpha = 1, size = 1, color = 'grey20', stroke = 0) +
-#   geom_sf(fill = '#cbe6ef', color = 'transparent') + ##cbe6ef
-#   geom_sf(data = ozmaps::abs_ste, fill = "transparent", color = 'black') +
-#   xlim(xlims2) +
-#   ylim(ylims2) +
-#   labs(y = element_blank(), x = element_blank()) +
-#   theme_few() +
-#   theme(axis.text.x = element_text(angle = 90), panel.border = element_rect()) +
-#   geom_point(m2, 
-#              mapping = aes(x = long, y = lat, color = morphid2), 
-#              alpha = 1, size = 1, show.legend = F, shape = 4, stroke=1) +
-#   facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first)) +  # Apply the custom labeller
-#   scale_color_manual(values = morphid_colours)
+             alpha = 1, size = 2, show.legend = F, stroke = 0.2, shape = 21, color = "white") +
+  scale_x_continuous(limits = xlims2, labels = scales::number_format(accuracy = 5)) +
+  scale_y_continuous(limits=ylims2, labels = scales::number_format(accuracy = 5))
 
 #### images plot #################################
 # Load necessary libraries
@@ -222,10 +179,10 @@ create_image_plot <- function(image_path, title) {
   # Create ggplot with image and title
   ggplot() + 
     annotation_custom(img_grob) + 
-    # labs(title = title) +   # Add title
+    labs(title = title) +   # Add title
     theme_void() + 
     theme(
-      plot.margin = margin(0, 1, 0, 1),           # Margins: top, right, bottom, left
+      plot.margin = margin(0, 1, 1, 1),           # Margins: top, right, bottom, left
       plot.title = element_text(hjust = 0.5, size = 10, face = "plain", vjust = 1) # Preserve title capitalization
     )
 }
@@ -235,56 +192,29 @@ plots <- lapply(names(image_paths), function(name) {
   create_image_plot(image_paths[[name]], title = name)  # Use the exact name for the title
 })
 
-# Arrange the plots in a single column
-image_grid <- ggarrange(
-  plotlist = plots, 
-  nrow = 1, ncol = 5  # One column, five rows
-)
-
-# Assuming morphotype_sample_map is already defined, combine it with the image grid
-combined_image_map_plot <- ggarrange(
-  image_grid+theme(plot.margin = margin(0,1,0,34)),           # Image grid plot
-  morphotype_sample_map2, # The main ggplot
-  nrow = 2,             # Two columns
-  heights = c(1, 2.5)
-  )
-
-# Save the combined plot to a file
-ggsave('LantCama/outputs/combined_image_map_plot.png', combined_image_map_plot, dpi = 300, width = 15, height = 10, units = "cm", bg = "white")
-
-
-combined_image_map_plot2 <- ggarrange(whole_aus_sample_map, combined_image_map_plot, nrow=2)
-ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 15, height = 20, units = "cm", bg = "white")
-
-combined_image_map_plot2 <- ggarrange(whole_aus_sample_map, combined_image_map_plot, ncol=2, widths=c(1,1.5))
-ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 20, height = 10, units = "cm", bg = "white")
-
-
-
 
 image_grid2 <- ggarrange(
   plotlist = plots, 
   ncol = 1, nrow = 5  # One column, five rows
 )
-aus_and_facet <- ggarrange(whole_aus_sample_map, morphotype_sample_map, nrow=2, heights=c(1,1.7))
+
+aus_and_facet <- ggarrange(whole_aus_sample_map+theme(plot.margin = margin(5,0,-5,0))+custom_theme,
+                           morphotype_sample_map+theme(plot.margin = margin(0,5,-5,0))+custom_theme,
+                          nrow=2, heights=c(1,1.8))
 
 combined_image_map_plot2 <- ggarrange(
-  image_grid2, #+theme(plot.margin = margin(0,1,0,34)),           # Image grid plot
+  image_grid2 +theme(plot.margin = margin(-2,-2,2,5)),  # Margins: top, right, bottom, left
   aus_and_facet, # The main ggplot
   ncol = 2,             # Two columns
-  widths = c(1, 3)
+  widths = c(0.9, 3)
 )
 
-ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 15, height = 20, units = "cm", bg = "white")
-
+ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 14, height = 18, units = "cm", bg = "white")
 
 #### tsne cluster map ####
 m2$cluster <- factor(m2$cluster, levels=c("A","B",'C','D', 'E', 'F', 'G', 'H', NA))
 
 cluster_sample_map <- ggplot(difference_poly) + 
-  # geom_point(result2, 
-  #            mapping=aes(x=decimalLongitude, y=decimalLatitude), 
-  #            alpha=0.2, size=1, color='grey80', stroke=0)+ 
   geom_sf(fill='#cbe6ef',color='transparent') +
   geom_sf(data=ozmaps::abs_ste,fill="transparent",color='black') +
   xlim(xlims2)+
