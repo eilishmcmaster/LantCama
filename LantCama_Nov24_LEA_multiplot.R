@@ -5,11 +5,14 @@ library(ggpubr)
 library(tibble)
 
 
-nd_lea <- dart2lea(dms, RandRbase, species, dataset)
-kvalrange <- 1:20
-snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
+# nd_lea <- dart2lea(dms, RandRbase, species, dataset)
+# kvalrange <- 1:20
+# snmf1 <- snmf(nd_lea, K=kvalrange, entropy = TRUE, repetitions = 3, project = "new", CPU=8)
+# 
+# save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 
-save(snmf1, file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
+
 
 # Function to generate a plot for a given K value
 generate_plot_for_K <- function(K_value, snmf1, dms, hdb_df2) {
@@ -51,7 +54,7 @@ generate_plot_for_K <- function(K_value, snmf1, dms, hdb_df2) {
 }
 
 # List of K values to generate plots for
-K_values <- c(5, 7, 9)  # Add more values as needed
+K_values <- c(3, 5, 7, 9, 11)  # Add more values as needed
 
 # Generate a list of plots for each K value
 plots <- lapply(K_values, function(K) generate_plot_for_K(K, snmf1, dms, hdb_df2))
@@ -61,3 +64,5 @@ combined_plot <- ggarrange(plotlist = plots, ncol = 1, nrow = length(K_values))
 
 # Display the combined plot
 print(combined_plot)
+
+ggsave('LantCama/outputs/SupFig_combined_lea.png', combined_plot, width = 20, height = 25,dpi=600, units = "cm")
