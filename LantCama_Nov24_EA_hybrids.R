@@ -18,7 +18,7 @@ pca_hybrids$Ho <- ind_ho[match(pca_hybrids$Row.names, names(ind_ho))]
 pc1_ho_plot <- ggplot(pca_hybrids,
        aes(x=PC1, y=Ho, colour=morphid2, shape=site))+
   xlab(pcnames[1])+ylab("Ho (MAF 2%)")+
-  geom_point(size=1)+
+  geom_point(size=2)+
   theme_few()+geom_vline(xintercept = 0, alpha=0.2)+
   geom_hline(yintercept = 0, alpha=0.2)+
   labs(colour="HBDSCAN Cluster", shape="Site")+
@@ -34,10 +34,10 @@ parent2 <- pca_hybrids$Row.names[which(pca_hybrids$PC1 > 10)]
 
 
 d3.1_hybrids <- remove.by.list(d3,hybrids_only)
-d4_hybrids        <- remove.poor.quality.snps(d3.1_hybrids, min_repro=0.98, max_missing=0.9)%>% remove.fixed.snps()
+d4_hybrids        <- remove.poor.quality.snps(d3.1_hybrids, min_repro=0.98, max_missing=1) %>% remove.fixed.snps()
 d5_hybrids        <- sample.one.snp.per.locus.random(d4_hybrids, seed=12345) 
 
-gt_hybrids <- d3$gt[which(d3$sample_names %in% hybrids_only),]
+gt_hybrids <- d5_hybrids$gt[which(d5_hybrids$sample_names %in% hybrids_only),]
 
 
 # Calculate allele frequencies with missing data handled
@@ -45,8 +45,8 @@ parent1_af <- colSums(gt_hybrids[parent1, ], na.rm = TRUE) / (2 * colSums(!is.na
 parent2_af <- colSums(gt_hybrids[parent2, ], na.rm = TRUE) / (2 * colSums(!is.na(gt_hybrids[parent2, ])))
 
 # Identify loci with high missingness (>90%) in each parent group
-parent1_na <- colnames(gt_hybrids[, which((colSums(is.na(gt_hybrids[parent1,])) / length(parent1)) > 0.95)])
-parent2_na <- colnames(gt_hybrids[, which((colSums(is.na(gt_hybrids[parent2,])) / length(parent2)) > 0.95)])
+parent1_na <- colnames(gt_hybrids[, which((colSums(is.na(gt_hybrids[parent1,])) / length(parent1)) > 0.80)])
+parent2_na <- colnames(gt_hybrids[, which((colSums(is.na(gt_hybrids[parent2,])) / length(parent2)) > 0.80)])
 
 # Identify loci fixed for 'a' and 'b' alleles in each parent group
 parent1_fixed_a <- setdiff(colnames(gt_hybrids[, which(parent1_af <= 0.05)]), parent1_na)
@@ -75,22 +75,40 @@ parent_ann <- rowAnnotation(
   annotation_name_gp = gpar(fontsize = 0)
 )
 
+site_ann <- rowAnnotation(
+  Site = pca_hybrids$site,
+  # col = list(
+  #   Site = colorRamp2(
+  #     c(min(pca_hybrids$site, na.rm = TRUE), mean(pca_hybrids$site, na.rm = TRUE), max(pca_hybrids$site, na.rm = TRUE)),
+  #     c("red", "white", "blue")
+  #   )
+  # ),
+  annotation_name_side = "top",
+  annotation_name_gp = gpar(fontsize = 0)
+)
+
 # Plot heatmap
-hybrid_gt_heatmap <- Heatmap(as.matrix(gt_hybrids_fixed),
-        # col=colorRamp2(c(0, 1, 2), c("#FFEE8C", "forestgreen", "lightblue")),
-        col=c("0" = "#FFEE8C", "1" = "forestgreen", "2" = "lightblue"),
-        na_col = "white",
-        row_names_gp = gpar(fontsize = 8),
-        show_column_names = FALSE,
-        cluster_rows = FALSE,
-        cluster_columns = FALSE,
-        right_annotation = parent_ann,
-        heatmap_legend_param = list(
-          title = "Genotype",               # Change legend title
-          at = c(0, 1, 2),                  # Specify values in the legend
-          labels = c("AA", "AB", "BB")      # Custom labels for the legend
-        )
-        )
+# Split heatmap by site
+hybrid_gt_heatmap <- Heatmap(
+  as.matrix(gt_hybrids_fixed),
+  col = c("0" = "#FFEE8C", "1" = "forestgreen", "2" = "lightblue"),
+  na_col = "white",
+  row_names_gp = gpar(fontsize = 8),
+  show_column_names = FALSE,
+  show_row_dend = FALSE,
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  right_annotation = c(parent_ann),
+  split = pca_hybrids$site,
+  row_title_gp = gpar(fontsize = 10),
+  heatmap_legend_param = list(
+    title = "Genotype",               # Legend title
+    at = c(0, 1, 2),                  # Values in the legend
+    labels = c("AA", "AB", "BB")      # Custom labels for the legend
+  ),
+  border = TRUE,                      # Enable borders around cells
+  border_gp = gpar(col = "black", lwd = 0.5)  # Set border color and width
+)
 
 
 
@@ -107,4 +125,5 @@ combined_plots %<>%
   fill_panel(draw(hybrid_gt_heatmap), column = 2, row = 1, label = "b")
 
 ggsave('LantCama/outputs/SupFig_hybrids.pdf', combined_plots, width = 29, height = 12, units = "cm")
+ggsave('LantCama/outputs/SupFig_hybrids.png', combined_plots,dpi=300, width = 29, height = 12, units = "cm")
 
