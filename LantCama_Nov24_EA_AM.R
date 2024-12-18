@@ -215,36 +215,8 @@ ggsave("LantCama/outputs/LantCama_splitstree_HDBSCAN_clusters_80miss_maf2.png",
 # 
 # write.tree(treeUPGMA, file='treeUPGMA.tree')
 
-#### read in tree ####
+#### legends ####
 
-upgma <- read.tree('/Users/eilishmcmaster/Documents/LantCama/upgma/treeUPGMA.tree')
-
-upgma$node.label <- round(as.numeric(upgma$node.label),0)
-
-x1 <- m2[m2$sample %in% upgma$tip.label,]
-rownames(x1) <- x1$sample
-nation_colours <- named_list_maker(x1$national2, 'Paired',11)
-
-#### plot tree ####
-##### full tree ####
-
-ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1 
-
-hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2')]),#'svdq_pop_label',
-                offset=0.0007, width=.05, font.size=0,
-                colnames_angle=90, colnames_position="top",
-                custom_column_labels=c("HBDSCAN cluster",'Morphotype',"Origin"), hjust=0) +
-  scale_fill_manual(values=c(tsne_cols,nation_colours, morphid_colours), na.value = "white") +
-  theme_tree2() +
-  geom_tiplab(aes(label = label), size=0.8) +
-  # geom_rootedge(0.0005, size=0.3)+
-  geom_label2(data=upgma, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
-  # geom_label2(data=upgma, aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
-  #             color='red', nudge_x = 0.0003, label.size=0, fill="transparent", size=2) +
-  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))
-  # geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
-
- 
 # Create separate ggplots for each fill scheme
 plot_cluster_pop <- ggplot(m2, aes(x=long,y=lat, fill=clusters)) +
   geom_tile() +
@@ -284,14 +256,45 @@ legends <- cowplot::plot_grid(legend_cluster_pop,legend_morphid2, legend_nationa
 legends2 <- cowplot::plot_grid(legend_morphid2, legend_national2,  nrow=1, align="hv") #+ theme(aspect.ratio = 1/3) # Adjust aspect 
 legends3 <- cowplot::plot_grid(legends2, legend_country,nrow=2)
 
-combined_plot <- cowplot::plot_grid(hmt, legends,nrow = 2, rel_heights = c(1, 0.15))
-combined_plot
+#### read in tree ####
 
-ggsave("LantCama/outputs/LantCama_upgma_maf2.pdf",
-       combined_plot, width = 20, height = 40, units = "cm", dpi=600)
+upgma <- read.tree('/Users/eilishmcmaster/Documents/LantCama/upgma/treeUPGMA.tree')
 
-ggsave("LantCama/outputs/LantCama_upgma_maf2.png",
-       combined_plot, width = 25, height = 40, units = "cm", dpi=300)
+upgma$node.label <- round(as.numeric(upgma$node.label),0)
+# upgma <- unroot(upgma)
+upgma <- ape::root(upgma, node = 990, resolve.root=TRUE)
+
+x1 <- m2[m2$sample %in% upgma$tip.label,]
+rownames(x1) <- x1$sample
+nation_colours <- named_list_maker(x1$national2, 'Paired',11)
+
+#### plot tree ####
+##### full tree ####
+
+ggtree_obj <- ggtree(upgma, size=0.3) %<+% x1 
+
+hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2', 'country')]),#'svdq_pop_label',
+                offset=0.0007, width=.05, font.size=0,
+                colnames_angle=90, colnames_position="top",
+                custom_column_labels=c("HBDSCAN cluster",'Morphotype',"Origin",'Country'), hjust=0) +
+  scale_fill_manual(values=c(tsne_cols,nation_colours, morphid_colours, country_colours), na.value = "white") +
+  theme_tree2() +
+  geom_tiplab(aes(label = label), size=0.8, align = TRUE, linetype = "dotted", linesize=0.1) +
+  geom_rootedge(0.0005, size=0.3)+
+  geom_label2(data=upgma, aes(label=node),color='red', nudge_x = 0.0001, label.size=0, fill="transparent", size=1)+
+  # geom_label2(data=upgma, aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 50),
+  #             color='red', nudge_x = 0.0003, label.size=0, fill="transparent", size=2) +
+  theme(legend.position = "none",plot.margin = margin(0, -0.8, 0, 0, "cm"), axis.text.x = element_text(size=6))
+  # geom_nodepoint(aes(color=as.numeric(label)), size=0.5)+scale_color_distiller(palette = "RdYlBu", direction=+1, na.value = NA)
+
+
+combined_plot <- cowplot::plot_grid(hmt, legends3 ,nrow = 2, rel_heights = c(1, 0.15))
+
+ggsave("LantCama/outputs/LantCama_upgma_maf2_rooted.pdf",
+       combined_plot, width = 25, height = 40, units = "cm", dpi=600)
+
+# ggsave("LantCama/outputs/LantCama_upgma_maf2.png",
+#        combined_plot, width = 25, height = 40, units = "cm", dpi=300)
 
 #### collapsed UPGMA ####
 library(ggtree)
