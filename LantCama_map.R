@@ -13,7 +13,7 @@ custom_theme <- theme(axis.text = element_text(size=8),
                       legend.key.size = unit(0.5, 'lines'),
                       legend.key.height = unit(0, 'lines'))
 
-# meta <- read.xlsx("/Users/eilishmcmaster/Documents/ZierObco/ZierObco/meta/ZierObco_DZ22-7321_meta.xlsx") # get meta for lat long limits
+meta <- read.xlsx("/Users/eilishmcmaster/Documents/LantCama/LantCama/outputs/LantCama_tsne_HDBSCAN_clusters.xlsx") # get meta for lat long limits
 
 AVH_resources <- c("NSW BioNet Atlas", "PlantBank Records",
                    "NSW AVH feed", "BRI AVH data","ERBG AVH data",
@@ -47,52 +47,27 @@ result <- galah_call() |>
 result2 <- result[which(result$year >=2000 & 
                           result$country =="Australia"), ] #& result$country=="Australia"
 
-divxlims <- c(min(result2$decimalLongitude, na.rm=TRUE)-0.3,
-              max(result2$decimalLongitude, na.rm=TRUE)+0.3) #find the min / max longitude
-
-divylims <- c(min(result2$decimalLatitude, na.rm=TRUE)-0.2,
-              max(result2$decimalLatitude, na.rm=TRUE)+0.2) #find the min / max latitude
-
-xlims <- c(113, 155)
-ylims <- c(-43,-10)
-
-library("ozmaps")
-test_map <- ggplot(ozmaps::abs_ste) + 
-  geom_sf(fill="white", color='black') +
-  geom_point(result2, 
-             mapping=aes(x=decimalLongitude, y=decimalLatitude), 
-             alpha=1, size=2, color='grey80')+ #steelblue
-  geom_sf(alpha=0, color='black') +
-  # coord_sf(xlim = divxlims, ylim = divylims) +
-  xlim(xlims)+
-  ylim(ylims)+
-  labs(y=element_blank(), x=element_blank(), colour="ALA records")+
-  theme_few()+
-  theme(axis.text.x = element_text(angle=90), panel.background = element_rect(fill="grey90"))+
-  geom_point(m2, 
-             mapping=aes(x=long, y=lat), 
-             alpha=1, size=1, color='red', shape=16)
-
-test_map
-
 ### invert australia ####
 # Define the bounding box as a polygon
-xlims2 <- c(96.81703, 167.9969)
-ylims2 <- c(-8, -45)
+xlims <- c(96.81703, 167.9969)
+ylims <- c(-8, -45)
+
+xlims2 <- c(112, 155)
+ylims2 <- c(-10, -43)
 
 ### bound for zoom 
 
-xlims2 <- c(140, 155)
-ylims2 <- c(-36.4,-14.5)
+xlims3 <- c(140, 155)
+ylims3 <- c(-36.4,-14.5)
 
 #### inverse australia polygon ####
 # Create the bounding box polygon
 bbox_poly <- st_as_sf(st_sfc(st_polygon(list(matrix(c(
-  xlims2[1], ylims2[1],
-  xlims2[2], ylims2[1],
-  xlims2[2], ylims2[2],
-  xlims2[1], ylims2[2],
-  xlims2[1], ylims2[1]
+  xlims[1], ylims[1],
+  xlims[2], ylims[1],
+  xlims[2], ylims[2],
+  xlims[1], ylims[2],
+  xlims[1], ylims[1]
 ), ncol = 2, byrow = TRUE))), crs = 4326)) # Use CRS consistent with GDA94
 
 # Load ozmaps::abs_ste
@@ -104,31 +79,36 @@ australia_map <- st_transform(australia_map, st_crs(bbox_poly))
 # Perform the difference operation
 difference_poly <- st_difference(bbox_poly, st_union(australia_map))
 
-whole_aus_sample_map <- ggplot(difference_poly) + 
-  # geom_sf(fill="white", color='black') +
-  geom_point(result2, 
-             mapping=aes(x=decimalLongitude, y=decimalLatitude), 
-             alpha=0.2, size=1, color='grey80', stroke=0)+ 
-  geom_sf(fill='#cbe6ef',color='transparent') +
-  labs(y=element_blank(), x=element_blank(), colour="ALA records")+
-  theme_few()+
-  theme(panel.background = element_rect(fill="white"))+
-  geom_sf(data=ozmaps::abs_ste, fill="transparent", color='black') +
-  geom_point(m2, 
+whole_aus_sample_map <- ggplot()+
+    geom_point(result2, 
+               mapping=aes(x=decimalLongitude, y=decimalLatitude), 
+               alpha=0.2, size=1, color='grey80', stroke=0)+ 
+  geom_point(data=meta, 
              mapping=aes(x=long, y=lat), 
              alpha=1, size=1, color='blue', shape=16)+
-  annotation_custom(
-    grob = rectGrob(gp = gpar(col = "red", fill = NA, lwd = 1 )), 
-    xmin = xlims2[1], xmax = xlims2[2], ymin = ylims2[1], ymax = ylims2[2]
-  )+
-  scale_x_continuous(limits = xlims, labels = scales::number_format(accuracy = 5)) +
-  scale_y_continuous(limits=ylims, labels = scales::number_format(accuracy = 5))
+    geom_sf(data=difference_poly,fill='#cbe6ef',color='transparent'
+            ) +
+    geom_sf(data=ozmaps::abs_ste, fill="transparent", color='black')+
+    annotation_custom(
+      grob = rectGrob(gp = gpar(col = "red", fill = NA, lwd = 1 )), 
+      xmin = xlims3[1], xmax = xlims3[2], ymin = ylims3[1], ymax = ylims3[2]
+    )+
+    coord_sf(xlim=xlims2, ylim=ylims2)+
+    scale_x_continuous(labels = scales::number_format(accuracy = 5),
+                       breaks= seq(from = floor(min(xlims2) / 5) * 5,
+                                   to = ceiling(max(xlims2) / 5) * 5,
+                                   by = 5)) +
+    scale_y_continuous(labels = scales::number_format(accuracy = 5))+
+  theme(panel.background = element_rect(fill="white"))+
+  labs(x=element_blank(), y=element_blank())+
+    theme_few()
+    
 
 whole_aus_sample_map
 
 #### morphotype map ####
 
-m2$morphid2 <- factor(m2$morphid2, levels=c("pink","PER", "red", "orange",  "white","undetermined"))
+meta$morphid2 <- factor(meta$morphid2, levels=c("pink","PER", "red", "orange",  "white","undetermined"))
 
 
 # Custom labeller function to capitalize the first letter of each facet label, except "PER"
@@ -145,14 +125,17 @@ morphotype_sample_map <- ggplot(difference_poly) +
   geom_sf(data = ozmaps::abs_ste, fill = "transparent", color = 'black') +
   labs(y = element_blank(), x = element_blank()) +
   theme_few() +
-  theme(axis.text.x = element_text(angle = 90), panel.border = element_rect()) +
+  theme( panel.border = element_rect()) +#axis.text.x = element_text(angle = 90),
   facet_wrap(~morphid2, labeller = labeller(morphid2 = capitalize_first)) +  # Apply the custom labeller
   scale_fill_manual(values = morphid_colours)+
-  geom_point(m2, 
+  geom_point(meta, 
              mapping = aes(x = long, y = lat, fill = morphid2), 
              alpha = 1, size = 2, show.legend = F, stroke = 0.2, shape = 21, color = "white") +
-  scale_x_continuous(limits = xlims2, labels = scales::number_format(accuracy = 5)) +
-  scale_y_continuous(limits=ylims2, labels = scales::number_format(accuracy = 5))
+  scale_x_continuous(limits = xlims3, labels = scales::number_format(accuracy = 5),
+                     breaks= seq(from = floor(min(xlims3) / 5) * 5, 
+                                 to = ceiling(max(xlims3) / 5) * 5, 
+                                 by = 5)) +
+  scale_y_continuous(limits=ylims3, labels = scales::number_format(accuracy = 5))
 
 #### images plot #################################
 # Load necessary libraries
@@ -209,42 +192,32 @@ combined_image_map_plot2 <- ggarrange(
   widths = c(0.9, 3)
 )
 
-ggsave('LantCama/outputs/combined_image_map_plot2.png', combined_image_map_plot2, dpi = 300, width = 14, height = 18, units = "cm", bg = "white")
+ggsave('LantCama/outputs/combined_image_map_plot.png', combined_image_map_plot2, dpi = 300, width = 14, height = 18, units = "cm", bg = "white")
 
 #### tsne cluster map ####
-m2$cluster <- factor(m2$cluster, levels=c("A","B",'C','D', 'E', 'F', 'G', 'H', NA))
+meta$cluster[which(is.na(meta$cluster))] <- "Unclustered"
+meta$cluster <- factor(meta$cluster, levels=c("A","B",'C','D', 'E', 'F', 'G', 'H', 'Unclustered'))
+
+tsne_cols['Unclustered'] <- 'grey50'
 
 cluster_sample_map <- ggplot(difference_poly) + 
   geom_sf(fill='#cbe6ef',color='transparent') +
   geom_sf(data=ozmaps::abs_ste,fill="transparent",color='black') +
-  xlim(xlims2)+
-  ylim(ylims2)+
   labs(y=element_blank(), x=element_blank())+
   theme_few()+
-  theme(axis.text.x = element_text(angle=90), panel.border = element_rect())+
-  geom_point(m2, 
+  theme(panel.border = element_rect())+#axis.text.x = element_text(angle=90), 
+  geom_point(meta, 
              mapping=aes(x=long, y=lat, fill=cluster), 
              alpha=1, size=2, show.legend = F, stroke=0.1, shape=21, color="white")+
   facet_wrap(~cluster, nrow=2)+
-  scale_fill_manual(values=tsne_cols)
+  scale_fill_manual(values=tsne_cols) +
+  scale_x_continuous(limits = xlims3, labels = scales::number_format(accuracy = 5),
+                     breaks= seq(from = floor(min(xlims3) / 5) * 5, 
+                         to = ceiling(max(xlims3) / 5) * 5, 
+                         by = 5)) +
+  scale_y_continuous(limits=ylims3, labels = scales::number_format(accuracy = 5))+
+  custom_theme
 
-ggsave('LantCama/outputs/cluster_sample_map.png', cluster_sample_map,dpi=600, width = 20, height = 19, units = "cm")
+ggsave('LantCama/outputs/cluster_sample_map.png', cluster_sample_map,dpi=600, width = 14, height = 12, units = "cm")
 
-
-# cluster_sample_map <- ggplot(difference_poly) + 
-#   # geom_point(result2, 
-#   #            mapping=aes(x=decimalLongitude, y=decimalLatitude), 
-#   #            alpha=0.2, size=1, color='grey80', stroke=0)+ 
-#   geom_sf(fill='#cbe6ef',color='transparent') +
-#   geom_sf(data=ozmaps::abs_ste,fill="transparent",color='black') +
-#   xlim(xlims2)+
-#   ylim(ylims2)+
-#   labs(y=element_blank(), x=element_blank())+
-#   theme_few()+
-#   theme(axis.text.x = element_text(angle=90), panel.border = element_rect())+
-#   geom_point(m2, 
-#              mapping=aes(x=long, y=lat, fill=cluster), 
-#              alpha=1, size=2, show.legend = F, stroke=0.1, shape=21, color="white")+
-#   # facet_wrap(~cluster, nrow=2)+
-#   scale_fill_manual(values=tsne_cols2, na.value = NA)
 

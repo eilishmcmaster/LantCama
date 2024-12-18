@@ -87,6 +87,7 @@ morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CC
 tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
                          "#FB9A99", "#E31A1C", "#FDBF6F"), names = c(NA, "A", "B", "C", 
                                                                      "D", "E", "F", "G"))
+nation_colours <- named_list_maker(m2$national2, 'Paired',11)
 
 
 tsne_cols2 <- tsne_cols[!is.na(names(tsne_cols))]
@@ -106,8 +107,8 @@ custom_legend_theme <-   theme(legend.key.size = unit(0.5, 'lines'),
                                legend.text = element_text(size = 8))
 
 #### splitstree ####
-dms_maf2 <- remove.by.maf(dms, 0.02)
-length(dms_maf2$locus_names)
+# dms_maf2 <- remove.by.maf(dms, 0.02)
+# length(dms_maf2$locus_names)
 # splitstree(dist(dms_maf2$gt, method = "euclidean"), 'LantCama/outputs/20241205_all_LantCama_nexus_file_for_R_80missing_maf2.nex')
 
 library(tanggle)
@@ -261,12 +262,11 @@ legends3 <- cowplot::plot_grid(legends2, legend_country,nrow=2)
 upgma <- read.tree('/Users/eilishmcmaster/Documents/LantCama/upgma/treeUPGMA.tree')
 
 upgma$node.label <- round(as.numeric(upgma$node.label),0)
-# upgma <- unroot(upgma)
-upgma <- ape::root(upgma, node = 990, resolve.root=TRUE)
+# # upgma <- unroot(upgma)
+# upgma <- ape::root(upgma, node = 990, resolve.root=TRUE)
 
 x1 <- m2[m2$sample %in% upgma$tip.label,]
 rownames(x1) <- x1$sample
-nation_colours <- named_list_maker(x1$national2, 'Paired',11)
 
 #### plot tree ####
 ##### full tree ####
@@ -290,11 +290,11 @@ hmt <- gheatmap(ggtree_obj, as.matrix(x1[,c('clusters','morphid2','national2', '
 
 combined_plot <- cowplot::plot_grid(hmt, legends3 ,nrow = 2, rel_heights = c(1, 0.15))
 
-ggsave("LantCama/outputs/LantCama_upgma_maf2_rooted.pdf",
+ggsave("LantCama/outputs/LantCama_upgma_maf2.pdf",
        combined_plot, width = 25, height = 40, units = "cm", dpi=600)
 
-# ggsave("LantCama/outputs/LantCama_upgma_maf2.png",
-#        combined_plot, width = 25, height = 40, units = "cm", dpi=300)
+ggsave("LantCama/outputs/LantCama_upgma_maf2.png",
+       combined_plot, width = 25, height = 40, units = "cm", dpi=300)
 
 #### collapsed UPGMA ####
 library(ggtree)
@@ -309,6 +309,7 @@ nodes.identity <- c('G','E', 'F','B', 'C', 'A', 'D')
 
 names(nodes.identity) <- nodes.to.collapse
 
+cols_for_clades <- c(A="#EE6677", B="forestgreen", C="red3", D="#66CCEE", E="orange", `F`="#EE6677", G='orange')
 
 # Scale clade function proportional to the number of samples
 scaleMyClade <- function(.p, .node) {
@@ -322,7 +323,7 @@ scaleMyClade <- function(.p, .node) {
 # Collapse clade function with labels and colors
 collapseMyClade <- function(.p, .node) {
   label <- nodes.identity[as.character(.node)]
-  fill_color <- tsne_cols[label]
+  fill_color <- cols_for_clades[label]
   .p <- collapse(.p, .node, "max",  fill = fill_color, color="black", size=0.3)
   .p <- .p + geom_cladelabel(node = .node,align = TRUE, vjust=-0.02,offset.text=-0.0005, label = label,
                              fontsize = 3)

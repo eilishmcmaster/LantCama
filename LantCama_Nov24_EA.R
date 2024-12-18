@@ -65,7 +65,6 @@ m2$long <- as.numeric(m2$long)
 # morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
 morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange", undetermined="#2B2B2B")
 
-
 ### PCA  ################################################################################
 dms_maf2 <- remove.by.maf(dms, 0.02)
 length(dms_maf2$locus_names)
@@ -185,7 +184,7 @@ n_clusters <- length(unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))  # Exclud
 # tsne_cols <- c("white", tsne_cols)
 # names(tsne_cols) <- c(NA, unique(hdb_df2$cluster[!is.na(hdb_df2$cluster)]))
 # RColorBrewer::brewer.pal(n_clusters, "Pastel1")
-tsne_cols <- sbrewer.pal()tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
+tsne_cols <- structure(c("white", "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", 
                          "#FB9A99", "#E31A1C", "#FDBF6F"), names = c(NA, "A", "B", "C", 
                                                                      "D", "E", "F", "G"))
 
@@ -334,6 +333,13 @@ load(file='LantCama/popgen/LantCama_EA_only_snmf.RData')
 K_chosen <- 5
 best = which.min(cross.entropy(snmf1, K = K_chosen))
 plot(snmf1, col = "blue", pch = 19, cex = 1.2)
+entropy <- t(summary(snmf1)$crossEntropy) %>% as.data.frame()
+entropy$k <- 1:20
+entropy_plot <- ggplot(entropy, aes(x=k, y=mean))+
+  geom_point(color='blue')+
+  labs(y="Cross entropy")+
+  theme_bw()
+ggsave('LantCama/outputs/entropy_plot.png', entropy_plot, width = 12, height = 8,dpi=300, units = "cm")
 
 
 qmatrix_df <- as_tibble(Q(snmf1, K = K_chosen, run=which.min(cross.entropy(snmf1, K = K_chosen)))) %>%
@@ -494,18 +500,22 @@ Fst_sig$Geo_dist2 <-Fst_sig$Geo_dist/1000
 Fst_sig2 <- merge(Fst_sig, distinct(m2[,c("site_cluster","cluster")]), by.x="Var1", by.y="site_cluster", all.y=FALSE)
 Fst_sig2 <- merge(Fst_sig2, distinct(m2[,c("site_cluster","cluster")]), by.x="Var2", by.y="site_cluster", all.y=FALSE)
 Fst_sig2$same_cluster <- ifelse(Fst_sig2$cluster.x == Fst_sig2$cluster.y, "Intra-cluster", "Inter-cluster")
+Fst_sig2$same_cluster[which(is.na(Fst_sig2$same_cluster))] <- "Other"
 
 library(ggforce)
 fstp1 <- ggplot(Fst_sig2, aes(x= Geo_dist2, y=Fst, color=same_cluster))+
-  geom_point(size=1, alpha=0.3)+
+  geom_point(size=2, alpha=0.5, stroke=0)+
+  scale_color_manual(values=c('red','blue','grey'),na.translate = F)+
   labs(x="Distance (km)", y="FST", colour="Comparison")+
   theme_bw()+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position="bottom")
+  # scale_x_continuous(expand=c(0,0))+
+  # scale_y_continuous(expand=c(0,0))
 fstp1
 
 
-ggsave('LantCama/outputs/Figure2_fst.png',dpi = 300, fstp1, width = 12, height = 8, units = "cm")
-ggsave('LantCama/outputs/Figure2_fst.pdf',dpi = 300, fstp1, width = 12, height = 8, units = "cm")
+ggsave('LantCama/outputs/Figure2_fst.png',dpi = 300, fstp1, width = 12, height = 10, units = "cm")
+ggsave('LantCama/outputs/Figure2_fst.pdf',dpi = 300, fstp1, width = 12, height = 10, units = "cm")
 
 paste("Mantel statistic r is", round(man$statistic, 3), ", P =", man$signif)
 
@@ -622,25 +632,32 @@ draw(geo + gene, ht_gap = -gene_width, merge_legend=TRUE)
 # Turn off the PNG device
 dev.off()
 
+
 ####
 
-ind_ho <- fastDiversity::individual_Ho(dms$gt, genetic_group_var=NULL, maf=0.02, max_missingness = 1)
-m2$Ho <- ind_ho[match(m2$sample, names(ind_ho))]
-ho_plot <- ggplot(m2, aes(x=cluster, y=Ho, fill=cluster))+
-  geom_boxplot()+
-  scale_fill_manual(values=tsne_cols)+
-  theme_few()+
-  theme(legend.position = 'none')+
-  labs(x="HDBSCAN cluster", y="Ho (MAF 2%)")
+table(dms$meta$cluster)
 
-fst_ho_combined <- ggarrange(fstp1+theme(legend.position = 'bottom'), ho_plot, widths=c(1,0.8),
-                             # align='h',
-                             labels="AUTO", font.label = list(face = "plain"))
 
-fst_ho_combined
 
-ggsave('LantCama/outputs/Figure2_fst_ho.png',dpi = 600, fst_ho_combined, width = 20, height = 8, units = "cm")
-
+####
+# 
+# ind_ho <- fastDiversity::individual_Ho(dms$gt, genetic_group_var=NULL, maf=0.02, max_missingness = 1)
+# m2$Ho <- ind_ho[match(m2$sample, names(ind_ho))]
+# ho_plot <- ggplot(m2, aes(x=cluster, y=Ho, fill=cluster))+
+#   geom_boxplot()+
+#   scale_fill_manual(values=tsne_cols)+
+#   theme_few()+
+#   theme(legend.position = 'none')+
+#   labs(x="HDBSCAN cluster", y="Ho (MAF 2%)")
+# 
+# fst_ho_combined <- ggarrange(fstp1+theme(legend.position = 'bottom'), ho_plot, widths=c(1,0.8),
+#                              # align='h',
+#                              labels="AUTO", font.label = list(face = "plain"))
+# 
+# fst_ho_combined
+# 
+# ggsave('LantCama/outputs/Figure2_fst_ho.png',dpi = 600, fst_ho_combined, width = 20, height = 8, units = "cm")
+# 
 
 ####
 
