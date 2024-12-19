@@ -65,12 +65,16 @@ m2$long <- as.numeric(m2$long)
 # morphid_colours <- c(pink="#AA3377", PER="#228833", red="#EE6677", white="#66CCEE", orange="#CCBB44", undetermined="#2B2B2B")
 morphid_colours <- c(pink="#EE6677", PER="forestgreen", red="red3", white="#66CCEE", orange="orange", undetermined="#2B2B2B")
 
+
 ### PCA  ################################################################################
 dms_maf2 <- remove.by.maf(dms, 0.02)
 length(dms_maf2$locus_names)
 
-gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
-gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
+# gen_d5 <- new("genlight", dms_maf2[["gt"]]) #convert df to genlight object for glPca function
+# gen_pca <- glPca(gen_d5, parallel=TRUE, nf=6) #do pca -- this method somehow allows the input to hav1 NAs
+# save(gen_pca, file='LantCama/outputs/LantCama_pca.Rdata')
+
+load('LantCama/outputs/LantCama_pca.Rdata')
 
 g_pca_df <- gen_pca[["scores"]] #extract PCs
 g_pca_df2 <- merge(g_pca_df, m2, by.x=0, by.y="sample", all.y=FALSE, all.x=FALSE) # some in DArT are not in meta?
@@ -318,6 +322,13 @@ dms$meta$site_cluster <- paste0(dms$meta$site, ifelse(is.na(dms$meta$cluster), "
 
 m2$cluster <- hdb_df2$cluster[match(m2$sample,hdb_df2$sample)] %>% as.vector()
 m2$site_cluster <- paste0(m2$site, ifelse(is.na(m2$cluster), "", paste0("(",m2$cluster,")")))
+
+#### kin ####
+cluster_vec <- dms$meta$cluster
+cluster_vec[is.na(cluster_vec)] <- 'unclustered'
+kin <- individual_kinship_by_pop(dms, RandRbase, species, dataset, cluster_vec, maf=0.1, mis=0.2, as_bigmat=TRUE)
+
+
 # ### LEA ####
 # #
 library(LEA)

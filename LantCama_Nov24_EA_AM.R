@@ -424,3 +424,39 @@ ho_hist
 
 combined_hos <- ggarrange(ho_boxplot, ho_hist, labels="auto", font.label = list(face = "plain"),align='v')
 ggsave('LantCama/outputs/Figure2_ho_box_hist.png',dpi = 600, combined_hos, width = 20, height = 10, units = "cm")
+
+
+#### range distances ####
+
+library(dplyr)
+library(geosphere)  # For geodistances
+
+# Define a function to calculate the max distance in a cluster
+max_distance <- function(lat, long) {
+  coords <- cbind(long, lat)  # Longitude first for geosphere functions
+  coords <- na.omit(coords)  # Remove rows with NA values
+  distances <- distm(coords)  # Calculate pairwise distances
+  max(distances)  # Return the maximum distance
+}
+
+# Group by cluster and calculate the maximum distance
+cluster_max_distances <- meta %>%
+  group_by(cluster) %>%
+  summarise(
+    max_dist_km = max_distance(lat, long) / 1000  # Convert meters to kilometers
+  )
+
+# View the result
+print(cluster_max_distances)
+
+# Calculate the latitudinal span for each cluster
+latitudinal_span <- meta %>%
+  group_by(cluster) %>%
+  summarise(
+    min_lat = min(lat, na.rm = TRUE),  # Minimum latitude, ignoring NA
+    max_lat = max(lat, na.rm = TRUE),  # Maximum latitude, ignoring NA
+    degrees_latitude = max_lat - min_lat  # Difference in degrees
+  )
+
+# View the result
+print(latitudinal_span)
