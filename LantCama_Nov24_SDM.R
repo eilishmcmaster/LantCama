@@ -133,24 +133,25 @@ plot_b <- create_plot(max_df_b, "Cluster B (Common PER)")
 plot_c <- create_plot(max_df_c, "Cluster C (Oblong Red)")
 plot_d <- create_plot(max_df_d, "Cluster D (Helidon White)")
 plot_e <- create_plot(max_df_e, "Cluster E (True Orange)")
-plot_f <- create_plot(max_df_f, "Cluster F (Townsville Red-centred\nPink)")
+plot_f <- create_plot(max_df_f, "Cluster F (Townsville Red-centred Pink)")
 plot_g <- create_plot(max_df_g, "Cluster G (Townsville Prickly Orange)")
 
 
-# Display the plots
-
-combined_sdms <- ggarrange(plot_a2,
-          plot_f,
-          plot_b,
-          plot_d,
-          ncol=2,
-          # nrow=2, ncol=2, align='hv',
-          common.legend=T, legend="right", 
-          abels="auto") #font.label = list(face = "plain")
-
-ggsave('LantCama/outputs/LantCama_combined_sdms.png', plot=(combined_sdms), 
-       dpi = 300,
-       width = 20, height = 20, units = "cm")
+# # Display the plots
+# 
+# combined_sdms <- ggarrange(plot_a2,
+#           plot_f,
+#           plot_b,
+#           plot_d,
+#           ncol=2,
+#           # nrow=2, ncol=2, 
+#           align='hv',
+#           common.legend=T, legend="right", 
+#           abels="auto") #font.label = list(face = "plain")
+# 
+# ggsave('LantCama/outputs/LantCama_combined_sdms.png', plot=(combined_sdms), 
+#        dpi = 300,
+#        width = 20, height = 20, units = "cm")
 
 
 
@@ -158,9 +159,10 @@ library(gridExtra)
 
 # Ensure combined_sdms is created with ggarrange
 combined_sdms <- ggarrange(
-  plot_a, plot_f,
+  plot_a2, plot_f,
   plot_b, plot_d, # Replace with your actual plots
   ncol = 2, nrow = 2,
+  align='hv',
   common.legend=T, legend="right",
   labels = 'auto', font.label = list(face = "plain")
 )
@@ -177,19 +179,6 @@ ggsave(
 
 
 suit_legend <- cowplot::get_legend(plot_f)
-combined_sdms2 <- ggpubr::ggarrange(plot_a, 
-                            plot_b,
-                            plot_c, 
-                            plot_d,
-                            plot_e, 
-                            plot_f, 
-                            plot_g,
-                            suit_legend,
-                            ncol=3,nrow=3,
-                            align='hv',
-                           # nrow=2, ncol=2, align='hv',
-                           common.legend=T,legend='none',
-                           labels="auto") #font.label = list(face = "plain")
 
 combined_sdms2 <- cowplot::plot_grid(
                   plot_a + theme(legend.position = 'none'), 
